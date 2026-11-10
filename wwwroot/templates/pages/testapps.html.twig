@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-lg-7">
+        <h2 class="h6">Intentionally vulnerable apps for DAST testing</h2>
+        <p class="small text-body-secondary mb-0">Copy a <code>docker-compose.yml</code>, start it on an isolated lab host with Docker, then press <b>Scan this</b>.
+          Never expose these apps to the internet or a production network.</p>
+      </div>
+      <div class="col-sm-6 col-lg-3"><label class="form-label" for="taHost">Lab host IP or name</label><input class="form-control" id="taHost" placeholder="192.168.1.82"></div>
+      <div class="col-sm-6 col-lg-2"><button class="btn btn-outline-secondary w-100" id="taAll">All-in-one compose</button></div>
+    </div>
+  </div>
+</div>
+<div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3" id="taCards"></div>
+
+<div class="card mt-3">
+  <div class="card-header">Run a test app</div>
+  <div class="card-body small">
+    <ol class="mb-0">
+      <li>On the lab host: <code>mkdir -p ~/test-apps/&lt;app&gt; &amp;&amp; cd ~/test-apps/&lt;app&gt;</code></li>
+      <li>Save the compose file there as <code>docker-compose.yml</code>.</li>
+      <li><code>docker compose up -d</code>, then <code>docker compose ps</code> and <code>docker compose logs -f</code>.</li>
+      <li>Check from the WAS scanner in <a href="/create-scan">Create Scan</a> with <b>Check from scanner</b>.</li>
+      <li>Stop with <code>docker compose down</code>; reset data with <code>docker compose down -v</code>.</li>
+    </ol>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/testapps-catalog.js') }}"></script><script src="{{ asset('pages/testapps.js') }}"></script>{% endblock %}

@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+/secrets/
+/logs/**
+!/logs/*/
+!/logs/**/.gitkeep
+__pycache__/
+*.pyc
+.pytest_cache/
+/data/
+!/data/*/.gitkeep
+!/data/wordlists/
+!/data/sast/

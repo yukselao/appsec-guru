@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="d-flex align-items-center mb-3"><p class="text-body-secondary mb-0">One Security Center, any number of WAS scanner hosts. The default sensor is used unless a scan profile picks another.</p>
+  <button class="btn btn-primary ms-auto" id="snNew">Add sensor</button></div>
+<div class="row row-cols-1 row-cols-lg-2 g-3" id="snCards"></div>
+
+<div class="modal fade" id="snModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="snTitle">Add sensor</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label" for="snName">Name</label><input class="form-control" id="snName" placeholder="was4"></div>
+      <div class="col-md-6"><label class="form-label" for="snDesc">Description</label><input class="form-control" id="snDesc"></div>
+      <div class="col-md-5"><label class="form-label" for="snHost">Host / IP</label><input class="form-control" id="snHost" placeholder="192.168.1.68"></div>
+      <div class="col-md-2"><label class="form-label" for="snPort">Port</label><input class="form-control" id="snPort" type="number" value="22"></div>
+      <div class="col-md-3"><label class="form-label" for="snUser">User</label><input class="form-control" id="snUser" value="osadmin"></div>
+      <div class="col-md-2"><label class="form-label" for="snPass">Password</label><input class="form-control" id="snPass" type="password" autocomplete="off"></div>
+      <div class="col-md-6"><label class="form-label" for="snKey">Private key path (optional)</label><input class="form-control" id="snKey" placeholder="/home/app/.ssh/id_ed25519"></div>
+      <div class="col-md-6"><label class="form-label" for="snLog">Scanner log file</label><input class="form-control" id="snLog" value="/var/log/nessus-was/scanner.log"></div>
+      <div class="col-md-4"><label class="form-label" for="snJump">Jump host (optional)</label><input class="form-control" id="snJump" placeholder="sc = via Security Center"></div>
+      <div class="col-md-4"><label class="form-label" for="snJumpUser">Jump user</label><input class="form-control" id="snJumpUser"></div>
+      <div class="col-md-4"><label class="form-label" for="snJumpPass">Jump password</label><input class="form-control" id="snJumpPass" type="password" autocomplete="off"></div>
+      <div class="col-md-6"><label class="form-label" for="snScName">Security Center scanner name (optional)</label><input class="form-control" id="snScName"></div>
+      <div class="col-md-3"><label class="form-label" for="snZone">Default zone id</label><input class="form-control" id="snZone"></div>
+      <div class="col-md-3 d-flex align-items-end"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="snDefault"><label class="form-check-label" for="snDefault">Default sensor</label></div></div>
+    </div>
+    <div class="small text-body-secondary mt-2">Leave the password empty to use the ssh keys mounted from the host. Secrets are stored encrypted.</div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline-secondary me-auto" id="snTest" disabled>Test connection</button>
+    <button class="btn btn-primary" id="snSave">Save sensor</button></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/sensors.js') }}"></script>{% endblock %}

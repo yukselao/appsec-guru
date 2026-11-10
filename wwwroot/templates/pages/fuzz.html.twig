@@ -1,0 +1,70 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header">New discovery</div>
+      <div class="card-body">
+        <form id="fzForm">
+          <label class="form-label" for="fzUrl">Target URL</label>
+          <input class="form-control mb-1" id="fzUrl" type="url" placeholder="http://192.168.1.82:3000">
+          <div class="form-text mb-2">Put <code>FUZZ</code> where paths are tried, or leave it off to append <code>/FUZZ</code>.</div>
+          <label class="form-label" for="fzWordlist">Wordlist</label>
+          <select class="form-select mb-2" id="fzWordlist"></select>
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label" for="fzExt">Extensions</label><input class="form-control" id="fzExt" placeholder=".php,.bak,.zip"></div>
+            <div class="col-6"><label class="form-label" for="fzMethods">Method</label>
+              <select class="form-select" id="fzMethods"><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select></div>
+            <div class="col-6"><label class="form-label" for="fzMatch">Match codes</label><input class="form-control" id="fzMatch" value="200,204,301,302,307,401,403,405,500"></div>
+            <div class="col-6"><label class="form-label" for="fzFilter">Filter codes</label><input class="form-control" id="fzFilter" placeholder="404"></div>
+            <div class="col-6"><label class="form-label" for="fzThreads">Threads</label><input class="form-control" id="fzThreads" type="number" value="40"></div>
+            <div class="col-6"><label class="form-label" for="fzRate">Rate (req/s, 0=max)</label><input class="form-control" id="fzRate" type="number" value="0"></div>
+          </div>
+          <div class="mt-2"><label class="form-label" for="fzHeaders">Extra headers (one per line, Name: value)</label>
+            <textarea class="form-control mono" id="fzHeaders" rows="2" placeholder="Authorization: Bearer ..."></textarea></div>
+          <button class="btn btn-primary w-100 mt-3" id="fzGo" type="submit">Start discovery</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Wordlists<button class="btn btn-sm btn-outline-secondary ms-auto" id="fzUpload">Upload</button></div>
+      <div class="card-body p-0"><ul class="list-group list-group-flush small" id="fzWl"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">Discovery run <span id="fzState"></span>
+        <div class="ms-auto d-flex gap-2"><input class="form-control form-control-sm" style="max-width:200px" id="fzSearch" placeholder="filter paths">
+          <button class="btn btn-sm btn-outline-secondary" id="fzExport" disabled>Export</button>
+          <button class="btn btn-sm btn-outline-danger" id="fzCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-2" id="fzStats"></div>
+        <div class="progress mb-2" style="height:6px"><div class="progress-bar" id="fzProg" style="width:0"></div></div>
+        <div class="table-responsive" style="max-height:52vh;overflow:auto"><table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="position-sticky top-0"><tr><th>Status</th><th>Path</th><th>Length</th><th>Words</th><th>Lines</th><th>Redirect</th></tr></thead>
+          <tbody id="fzHits"><tr><td colspan="6" class="empty px-3">Start a discovery to see hidden paths.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Recent runs</div>
+      <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead><tr><th>#</th><th>Target</th><th>Wordlist</th><th>Status</th><th>Found</th><th>When</th><th></th></tr></thead>
+        <tbody id="fzRuns"></tbody></table></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="wlModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Upload wordlist</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body">
+    <label class="form-label" for="wlName">Name</label><input class="form-control mb-2" id="wlName" placeholder="my-paths.txt">
+    <label class="form-label" for="wlFile">Pick a file</label><input class="form-control mb-2" id="wlFile" type="file" accept=".txt,.lst,.list,text/plain">
+    <label class="form-label" for="wlContent">Or paste the words (one per line)</label>
+    <textarea class="form-control mono" id="wlContent" rows="8"></textarea>
+  </div>
+  <div class="modal-footer"><button class="btn btn-primary" id="wlSave">Save wordlist</button></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/fuzz.js') }}"></script>{% endblock %}

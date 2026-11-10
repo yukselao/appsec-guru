@@ -1,0 +1,114 @@
+{% import 'partials/icons.twig' as ic %}<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ asset('vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ asset('app.css') }}">
+  <script>(function(){try{var t=localStorage.getItem('wt-theme');if(t)document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
+</head>
+<body data-page="{{ page }}">
+<div class="wt-shell">
+  {# ---------------- sidebar (static on lg+, offcanvas below) ---------------- #}
+  <aside class="wt-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="wtSidebar" aria-labelledby="wtSidebarLabel">
+    <div class="offcanvas-header d-lg-none">
+      <span class="fw-semibold" id="wtSidebarLabel">{{ app_name }}</span>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#wtSidebar" aria-label="Close"></button>
+    </div>
+    <div class="wt-brand d-none d-lg-flex">{{ ic.icon('wolf', 'text-danger wt-logo') }}<span>{{ app_name }}</span></div>
+    <nav class="nav flex-column wt-nav flex-grow-1">
+      {% set prev = null %}
+      {% for key, p in pages %}
+        {% if not (p.hidden ?? false) and not (p.foot ?? false) %}
+          {% if p.group is defined and p.group != prev %}<div class="wt-nav-group">{{ p.group }}</div>{% endif %}
+          {% set prev = p.group ?? null %}
+          <a class="nav-link {{ key == page ? 'active' : '' }} {{ p.group is defined ? 'ps-4' : '' }}" href="/{{ key }}" {{ key == page ? 'aria-current="page"' : '' }}>
+            {{ ic.icon(p.icon) }}<span>{{ p.title }}</span>
+          </a>
+        {% endif %}
+      {% endfor %}
+      <div class="wt-nav-foot">
+        {% for key, p in pages %}
+          {% if p.foot ?? false %}
+          <a class="nav-link {{ key == page ? 'active' : '' }}" href="/{{ key }}" {{ key == page ? 'aria-current="page"' : '' }}>
+            {{ ic.icon(p.icon) }}<span>{{ p.title }}</span>
+          </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </nav>
+    <div class="wt-sidebar-foot small text-body-secondary">Tenable.sc · WAS scanner · AI</div>
+  </aside>
+
+  <div class="wt-main">
+    {# ---------------- heading bar ---------------- #}
+    <header class="wt-header">
+      <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#wtSidebar" aria-controls="wtSidebar" aria-label="Menu">{{ ic.icon('menu') }}</button>
+      <h1 class="wt-title">{% if pages[page].group is defined %}<span class="text-body-secondary fw-normal">{{ pages[page].group }} / </span>{% endif %}{{ title }}</h1>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="badge rounded-pill text-bg-light border wt-conn" id="wtConn" title="Connection status">…</span>
+        <button class="btn btn-sm btn-outline-secondary" id="wtTheme" type="button" title="Toggle theme">{{ ic.icon('moon') }}</button>
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#wtChat" aria-controls="wtChat">{{ ic.icon('chat') }}<span class="d-none d-sm-inline ms-1">AI assistant</span></button>
+      </div>
+    </header>
+
+    {# ---------------- content ---------------- #}
+    <main class="wt-content">
+      <nav aria-label="breadcrumb" class="wt-crumbs">
+        <ol class="breadcrumb mb-3">
+          {% for c in crumbs %}
+            {% if loop.last %}<li class="breadcrumb-item active" aria-current="page">{{ c[0] }}</li>
+            {% elseif c[1] %}<li class="breadcrumb-item"><a href="{{ c[1] }}">{{ c[0] }}</a></li>
+            {% else %}<li class="breadcrumb-item text-body-secondary">{{ c[0] }}</li>{% endif %}
+          {% endfor %}
+        </ol>
+      </nav>
+      {% if not_found %}<div class="alert alert-warning">Page not found; showing the Dashboard.</div>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="wt-footer">
+      <span><strong>{{ app_name }}</strong> · a Tenable Cyber Exchange project</span>
+      <span class="d-flex align-items-center gap-3">Designed and developed with care by Ali Okan Yüksel
+        <a class="btn btn-sm btn-outline-primary" href="https://buymeacoffee.com/aliokanyuksel" target="_blank" rel="noopener">☕ Buy me a coffee</a></span>
+    </footer>
+  </div>
+</div>
+
+{# ---------------- AI chat (right offcanvas, every page) ---------------- #}
+<div class="offcanvas offcanvas-end wt-chat" tabindex="-1" id="wtChat" aria-labelledby="wtChatLabel">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" id="wtChatLabel">AI assistant</h5>
+    <span class="badge text-bg-secondary ms-2" id="chatModel">no model</span>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column p-0">
+    <div class="wt-chat-log flex-grow-1 p-3" id="chatLog"></div>
+    <div class="border-top p-3">
+      <div class="d-flex flex-wrap gap-1 mb-2" id="chatAttachBtns">
+        <button class="btn btn-sm btn-outline-secondary" data-attach="screen">Log on screen</button>
+        <button class="btn btn-sm btn-outline-secondary" data-attach="errors">WARN/ERROR only</button>
+        <button class="btn btn-sm btn-outline-secondary" data-attach="status">Scan status</button>
+        <button class="btn btn-sm btn-outline-danger ms-auto" id="chatClear">Clear</button>
+      </div>
+      <div class="small text-body-secondary mb-1" id="chatAttachInfo"></div>
+      <textarea class="form-control" id="chatInput" rows="3" placeholder="Ask a question or paste log lines. Ctrl+Enter sends."></textarea>
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-primary" id="chatSend">Send</button>
+        <button class="btn btn-outline-secondary" id="chatStop" disabled>Stop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# All user messages (success, warning, error) appear here: top right, under the header. #}
+<div class="toast-container position-fixed end-0 p-3 wt-toasts" id="wtToasts" aria-live="polite"></div>
+
+<script src="{{ asset('vendor/jquery.min.js') }}"></script>
+<script src="{{ asset('vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('vendor/chart.umd.min.js') }}"></script>
+<script src="{{ asset('app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

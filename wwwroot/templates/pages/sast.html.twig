@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+{% if param %}
+<div id="sastDetail" data-run="{{ param }}">
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <h2 class="h5 mb-0" id="sdTitle">SAST run #{{ param }}</h2><span id="sdStatus"></span>
+    <div class="ms-auto d-flex gap-2"><button class="btn btn-sm btn-outline-danger" id="sdCancel" hidden>Cancel</button>
+      <button class="btn btn-sm btn-outline-danger" id="sdDelete">Delete</button></div>
+  </div>
+  <div class="row g-3 mb-3" id="sdCards"></div>
+  <div class="row g-3">
+    <div class="col-xl-8"><div class="card"><div class="card-header d-flex align-items-center">Findings
+      <select class="form-select form-select-sm ms-auto" style="max-width:160px" id="sdSev"><option value="">all severities</option><option>critical</option><option>high</option><option>medium</option><option>low</option></select></div>
+      <div class="card-body p-0"><div class="accordion accordion-flush" id="sdFindings"></div></div></div></div>
+    <div class="col-xl-4">
+      <div class="card mb-3"><div class="card-header">Severity</div><div class="card-body"><div class="chart-box" style="height:200px"><canvas id="chSastSev"></canvas></div></div></div>
+      <div class="card"><div class="card-header">Analysed functions</div><div class="card-body p-0" style="max-height:340px;overflow:auto"><ul class="list-group list-group-flush small" id="sdFns"></ul></div></div>
+    </div>
+  </div>
+  <div class="card mt-3"><div class="card-header">Run log</div><div class="card-body small mono" id="sdEvents" style="max-height:260px;overflow:auto"></div></div>
+</div>
+{% else %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">New SAST scan</div>
+      <div class="card-body">
+        <p class="small text-body-secondary">The offensive SAST agent clones a Git repository, extracts functions and reviews each argument from source to sink with the local LLM.</p>
+        <form id="sastForm">
+          <label class="form-label" for="scRepo">Repository URL (GitHub / GitLab)</label>
+          <input class="form-control mb-2" id="scRepo" placeholder="https://github.com/OWASP/NodeGoat">
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label" for="scRef">Branch / tag</label><input class="form-control" id="scRef" placeholder="default"></div>
+            <div class="col-6"><label class="form-label" for="scMax">Function budget</label><input class="form-control" id="scMax" type="number" value="40"></div>
+          </div>
+          <label class="form-label mt-2" for="scToken">Access token (private repos, not stored)</label>
+          <input class="form-control mb-2" id="scToken" type="password" autocomplete="off">
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label" for="scMinSev">Min severity</label><select class="form-select" id="scMinSev"><option value="low">low</option><option value="medium">medium</option><option value="high">high</option></select></div>
+            <div class="col-6 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="scTests"><label class="form-check-label small" for="scTests">include tests</label></div></div>
+          </div>
+          <button class="btn btn-primary w-100 mt-3" type="submit" id="scGo">Start SAST scan</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card"><div class="card-header">SAST runs</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+      <thead><tr><th>#</th><th>Repository</th><th>Status</th><th>Functions</th><th>Findings</th><th>When</th><th></th></tr></thead>
+      <tbody id="sastRuns"><tr><td colspan="7" class="empty px-3">No SAST runs yet.</td></tr></tbody></table></div></div></div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/sast.js') }}"></script>{% endblock %}

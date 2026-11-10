@@ -1,0 +1,87 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  {# ---------------- folder tree ---------------- #}
+  <div class="col-lg-3">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Folders<button class="btn btn-sm btn-outline-secondary ms-auto" id="newFolder" title="New folder">+</button></div>
+      <div class="card-body p-2"><div id="folderTree" class="small"></div></div>
+    </div>
+    <div class="card mt-3">
+      <div class="card-header">Running now</div>
+      <div class="card-body p-0"><ul class="list-group list-group-flush small" id="runningMini"><li class="list-group-item empty">Loading…</li></ul></div>
+    </div>
+  </div>
+
+  {# ---------------- profiles ---------------- #}
+  <div class="col-lg-9">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+      <h2 class="h5 mb-0" id="folderTitle">All scan profiles</h2>
+      <span class="badge text-bg-secondary" id="profCount">0</span>
+      <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" id="refreshProf">Refresh</button>
+        <button class="btn btn-sm btn-primary" id="newProfile">New scan profile</button>
+      </div>
+    </div>
+    <div id="profErr"></div>
+    <div class="row row-cols-1 row-cols-xl-2 g-3" id="profCards"></div>
+  </div>
+</div>
+
+{# ---------------- profile wizard modal ---------------- #}
+<div class="modal fade" id="profModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="pmTitle">New scan profile</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body">
+    <ol class="wizard-steps" id="pmSteps">
+      <li class="active" data-step="1">Name &amp; target</li><li data-step="2">Policy &amp; families</li>
+      <li data-step="3">Options</li><li data-step="4">Schedule</li>
+    </ol>
+    <section class="wizard-pane active" data-pane="1">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label" for="pmName">Profile name</label><input class="form-control" id="pmName" placeholder="Juice Shop nightly"></div>
+        <div class="col-md-6"><label class="form-label" for="pmFolder">Folder</label><select class="form-select" id="pmFolder"></select></div>
+        <div class="col-12"><label class="form-label" for="pmDesc">Description</label><input class="form-control" id="pmDesc"></div>
+        <div class="col-md-8"><label class="form-label" for="pmUrl">Target URL</label><input class="form-control" id="pmUrl" type="url" placeholder="http://192.168.1.82:3000"></div>
+        <div class="col-md-4"><label class="form-label" for="pmSensor">Sensor</label><select class="form-select" id="pmSensor"></select></div>
+      </div>
+    </section>
+    <section class="wizard-pane" data-pane="2">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label" for="pmPolicy">Source policy</label><select class="form-select" id="pmPolicy"></select></div>
+        <div class="col-md-6"><label class="form-label" for="pmDebug">Debug</label><select class="form-select" id="pmDebug">
+          <option value="none">Off</option><option value="sc">Policy only</option><option value="host">Scanner log only</option><option value="both" selected>Full debug</option></select></div>
+      </div>
+      <div class="d-flex align-items-center mt-3 mb-2"><span class="form-label mb-0">Plugin families</span>
+        <span class="small text-body-secondary ms-2">none = the policy's families</span><button type="button" class="btn btn-link btn-sm ms-auto" id="pmFamNone">Clear</button></div>
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-1" id="pmFamilies"></div>
+    </section>
+    <section class="wizard-pane" data-pane="3">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label" for="pmScope">Scope</label><select class="form-select" id="pmScope">
+          <option value="fast">Fast (150 pages, 45 min)</option><option value="policy">As in the policy</option></select></div>
+        <div class="col-md-4"><label class="form-label">Keep SC objects</label><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" id="pmKeep" checked><label class="form-check-label" for="pmKeep">keep scan &amp; copied policy</label></div></div>
+        <div class="col-md-2"><label class="form-label" for="pmRepo">Repo id</label><input class="form-control" id="pmRepo"></div>
+        <div class="col-md-2"><label class="form-label" for="pmZone">Zone id</label><input class="form-control" id="pmZone"></div>
+        <div class="col-12"><label class="form-label" for="pmSet">Extra preferences (name=value per line)</label><textarea class="form-control mono" id="pmSet" rows="2"></textarea></div>
+      </div>
+    </section>
+    <section class="wizard-pane" data-pane="4">
+      <div class="row g-3">
+        <div class="col-md-5"><label class="form-label" for="pmSchedType">Run</label><select class="form-select" id="pmSchedType">
+          <option value="on_demand">On demand (manual only)</option><option value="once">Once, at a time</option>
+          <option value="interval">Every N hours</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+        <div class="col-md-7" id="pmSchedFields"></div>
+        <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pmEnabled" checked><label class="form-check-label" for="pmEnabled">Schedule enabled</label></div></div>
+        <div class="col-12"><div class="alert alert-light border mb-0 small" id="pmSchedPreview"></div></div>
+      </div>
+    </section>
+  </div>
+  <div class="modal-footer">
+    <div class="form-check form-switch me-auto"><input class="form-check-input" type="checkbox" id="pmRunNow"><label class="form-check-label" for="pmRunNow">Run immediately after saving</label></div>
+    <button class="btn btn-outline-secondary" id="pmBack" disabled>Back</button>
+    <button class="btn btn-primary" id="pmNext">Next</button>
+    <button class="btn btn-success d-none" id="pmSave">Save profile</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/runningscans.js') }}"></script><script src="{{ asset('pages/scans.js') }}"></script>{% endblock %}

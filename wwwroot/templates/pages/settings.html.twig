@@ -1,0 +1,88 @@
+{% extends 'base.html.twig' %}
+{% macro field(key, label, type, help, cls) %}
+<div class="{{ cls|default('col-md-6') }}">
+  <label class="form-label d-flex align-items-center gap-2" for="s_{{ key|replace({'.': '_'}) }}">{{ label }}<span class="badge src-badge" data-src="{{ key }}"></span></label>
+  {% if type == 'checkbox' %}
+    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" data-key="{{ key }}" id="s_{{ key|replace({'.': '_'}) }}"></div>
+  {% elseif type == 'textarea' %}
+    <textarea class="form-control" rows="6" data-key="{{ key }}" id="s_{{ key|replace({'.': '_'}) }}"></textarea>
+  {% else %}
+    <input class="form-control" type="{{ type|default('text') }}" data-key="{{ key }}" id="s_{{ key|replace({'.': '_'}) }}" autocomplete="off" {% if type == 'password' %}data-secret="1"{% endif %}>
+  {% endif %}
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{% endmacro %}
+{% import _self as f %}
+{% block content %}
+<div class="alert alert-light border small">Values come from the <code>.env</code> file first. A value saved here overrides <code>.env</code>; secrets are stored encrypted in PostgreSQL.
+  The badge next to each field shows where the value comes from: <span class="badge text-bg-success">env</span> <span class="badge text-bg-primary">ui</span> <span class="badge text-bg-light border">default</span>.</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tSc" type="button">Security Center</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tSsh" type="button">WAS scanner (SSH)</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAi" type="button">AI (Ollama)</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAudit" type="button" id="tAuditBtn">Audit</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tSc" data-section="sc">
+    <div class="card mb-3"><div class="card-header">REST API</div><div class="card-body"><div class="row g-3">
+      {{ f.field('sc.url', 'Security Center URL', 'text', 'https://192.168.1.54 or https://host:port') }}
+      {{ f.field('sc.verify_tls', 'Verify the TLS certificate', 'checkbox', 'Leave off when Security Center uses a self-signed certificate') }}
+      {{ f.field('sc.access_key', 'API access key', 'password') }}
+      {{ f.field('sc.secret_key', 'API secret key', 'password') }}
+    </div></div></div>
+    <div class="card mb-3"><div class="card-header">SSH to the Security Center host</div><div class="card-body"><div class="row g-3">
+      {{ f.field('sc.ssh_host', 'Host / IP', 'text', 'Optional. Used for diagnostics and as a jump host.', 'col-md-4') }}
+      {{ f.field('sc.ssh_port', 'Port', 'number', '', 'col-md-2') }}
+      {{ f.field('sc.ssh_user', 'User', 'text', '', 'col-md-3') }}
+      {{ f.field('sc.ssh_password', 'Password', 'password', 'empty: ssh key', 'col-md-3') }}
+    </div></div></div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="sc">Save</button>
+      <button class="btn btn-outline-secondary" data-test="sc">Test API</button><button class="btn btn-outline-secondary" data-test="sc-ssh">Test SSH</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="sc">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tSsh" data-section="ssh">
+    <div class="card mb-3"><div class="card-header">WAS scanner</div><div class="card-body"><div class="row g-3">
+      {{ f.field('ssh.host', 'Host / IP / ssh alias', 'text', '', 'col-md-4') }}
+      {{ f.field('ssh.port', 'Port', 'number', '', 'col-md-2') }}
+      {{ f.field('ssh.user', 'User', 'text', '', 'col-md-3') }}
+      {{ f.field('ssh.password', 'Password', 'password', 'empty: ssh key (ssh_dir)', 'col-md-3') }}
+      {{ f.field('ssh.key_path', 'Private key path', 'text', 'path inside the api container, e.g. /home/app/.ssh/id_ed25519', 'col-md-6') }}
+      {{ f.field('ssh.log_path', 'Scanner log file', 'text', '', 'col-md-6') }}
+    </div></div></div>
+    <div class="card mb-3"><div class="card-header">Jump host (optional)</div><div class="card-body"><div class="row g-3">
+      {{ f.field('ssh.jump_host', 'Jump host', 'text', 'Type "sc" to use the Security Center SSH settings', 'col-md-4') }}
+      {{ f.field('ssh.jump_user', 'User', 'text', '', 'col-md-4') }}
+      {{ f.field('ssh.jump_password', 'Password', 'password', '', 'col-md-4') }}
+    </div></div></div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="ssh">Save</button>
+      <button class="btn btn-outline-secondary" data-test="ssh">Test connection</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="ssh">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tAi" data-section="ai">
+    <div class="card mb-3"><div class="card-header">Ollama</div><div class="card-body"><div class="row g-3">
+      {{ f.field('ai.ollama_url', 'Ollama URL', 'text', 'http://host:11434', 'col-md-6') }}
+      <div class="col-md-6">
+        <label class="form-label d-flex align-items-center gap-2" for="s_ai_model">Model<span class="badge src-badge" data-src="ai.model"></span></label>
+        <div class="input-group"><input class="form-control" data-key="ai.model" id="s_ai_model" list="aiModels" autocomplete="off"><button class="btn btn-outline-secondary" type="button" id="aiList">List models</button></div>
+        <datalist id="aiModels"></datalist>
+      </div>
+      {{ f.field('ai.temperature', 'Temperature', 'number', '0 to 1; keep it low for analysis', 'col-md-4') }}
+      {{ f.field('ai.ctx_chars', 'Log attachment limit (characters)', 'number', '', 'col-md-4') }}
+      {{ f.field('ai.num_ctx', 'Model context window (tokens)', 'number', '', 'col-md-4') }}
+      {{ f.field('ai.system_prompt', 'System prompt for the chat assistant', 'textarea', '', 'col-12') }}
+    </div></div></div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="ai">Save</button>
+      <button class="btn btn-outline-secondary" data-test="ai">Test connection and model</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="ai">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tAudit">
+    <div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Time</th><th>Action</th><th>Details</th><th>Client</th></tr></thead><tbody id="auditBody"></tbody></table></div></div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/settings.js') }}"></script>{% endblock %}

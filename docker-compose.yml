@@ -1,0 +1,146 @@
+x-python: &python
+  build: ./docker/api
+  image: was-troubleshooter-api
+  networks:
+    - wastroubleshooter
+
+x-pg-env: &pg-env
+  PG_HOST: postgres
+  PG_USER: ${pg_user:-was_troubleshooter}
+  PG_PASSWORD: ${pg_password:?Set pg_password in .env}
+  PG_DB: ${pg_db:-was_troubleshooter}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${pg_user:-was_troubleshooter}
+      POSTGRES_PASSWORD: ${pg_password:?Set pg_password in .env}
+      POSTGRES_DB: ${pg_db:-was_troubleshooter}
+      TZ: ${tz:-Europe/Istanbul}
+    ports:
+      - "127.0.0.1:${pg_port:-5439}:5432"
+    volumes:
+      # Data lives on the host, not in the container or a named volume.
+      - ${pg_data_dir:-./data/postgres}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - wastroubleshooter
+    restart: unless-stopped
+
+  # Applies the Alembic revisions in ./db and exits.
+  migrate:
+    <<: *python
+    working_dir: /db
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *pg-env
+      PYTHONPATH: /db
+    volumes:
+      - ./db:/db:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # FastAPI: Tenable.sc REST, ssh to the WAS scanner (logs, debug, processes),
+  # DAST scan jobs, the SAST agent harness (ai/), Ollama proxy. Code is bind-mounted; restart after a change.
+  api:
+    <<: *python
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000",
+              "--proxy-headers", "--forwarded-allow-ips", "*", "--timeout-keep-alive", "75"]
+    environment:
+      <<: *pg-env
+      PYTHONPATH: /app:/db
+      APP_SECRET_KEY_FILE: /run/secrets/app_secret_key
+      LOG_FILE: /var/log/was-troubleshooter/api.log
+      LOG_LEVEL: ${api_log_level:-INFO}
+      RUNS_DIR: /var/log/was-troubleshooter/runs
+      AI_DIR: /ai
+      SAST_DIR: /var/lib/was-troubleshooter/sast
+      REPORT_DIR: /var/log/was-troubleshooter/reports
+      WORDLIST_DIR: /var/lib/was-troubleshooter/wordlists
+      TZ: ${tz:-Europe/Istanbul}
+      # Connection settings from .env; the Settings page can override them.
+      SC_URL: ${sc_url:-}
+      SC_ACCESS_KEY: ${sc_access_key:-}
+      SC_SECRET_KEY: ${sc_secret_key:-}
+      SC_VERIFY_TLS: ${sc_verify_tls:-false}
+      SC_SSH_HOST: ${sc_ssh_host:-}
+      SC_SSH_PORT: ${sc_ssh_port:-22}
+      SC_SSH_USER: ${sc_ssh_user:-osadmin}
+      SC_SSH_PASSWORD: ${sc_ssh_password:-}
+      WAS_SSH_HOST: ${was_ssh_host:-}
+      WAS_SSH_PORT: ${was_ssh_port:-22}
+      WAS_SSH_USER: ${was_ssh_user:-osadmin}
+      WAS_SSH_PASSWORD: ${was_ssh_password:-}
+      WAS_SSH_KEY_PATH: ${was_ssh_key_path:-}
+      WAS_JUMP_HOST: ${was_jump_host:-}
+      WAS_JUMP_USER: ${was_jump_user:-}
+      WAS_JUMP_PASSWORD: ${was_jump_password:-}
+      WAS_LOG_PATH: ${was_log_path:-/var/log/nessus-was/scanner.log}
+      OLLAMA_URL: ${ollama_url:-http://192.168.1.140:11434}
+      OLLAMA_MODEL: ${ollama_model:-}
+    volumes:
+      - ./api:/app:ro
+      - ./db:/db:ro
+      - ./logs/api:/var/log/was-troubleshooter
+      - ./logs/runs:/var/log/was-troubleshooter/runs
+      # Agentic harness definitions (agents, skills, tools); edits apply on the next run.
+      - ./ai:/ai:ro
+      # SAST clones (removed after each run unless "keep clone" is set).
+      - ${sast_dir:-./data/sast}:/var/lib/was-troubleshooter/sast
+      # Wordlists for Hidden Path Discovery (built-in set seeded on start, plus uploads).
+      - ${wordlist_dir:-./data/wordlists}:/var/lib/was-troubleshooter/wordlists
+      # Host ssh keys and config (aliases such as was4). Copied to ~/.ssh at start.
+      - ${ssh_dir:-~/.ssh}:/ssh-host:ro
+    secrets:
+      - app_secret_key
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Web UI pages: php-fpm renders ./wwwroot (Twig); the browser talks to /api.
+  php:
+    build: ./docker/php
+    image: was-troubleshooter-php
+    environment:
+      APP_NAME: "AppSec Guru"
+      TZ: ${tz:-Europe/Istanbul}
+    volumes:
+      - ./wwwroot:/var/www/html:ro
+      - ./docker/php/zz-tuning.conf:/usr/local/etc/php-fpm.d/zz-tuning.conf:ro
+      - ./docker/php/zz-tuning.ini:/usr/local/etc/php/conf.d/zz-tuning.ini:ro
+    networks:
+      - wastroubleshooter
+    restart: unless-stopped
+
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "${web_bind:-0.0.0.0}:${web_port:-8091}:80"
+    volumes:
+      - ./wwwroot:/var/www/html:ro
+      - ./web/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+      - api
+    networks:
+      - wastroubleshooter
+    restart: unless-stopped
+
+networks:
+  wastroubleshooter:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.99.0.0/24
+
+secrets:
+  app_secret_key:
+    file: ${app_secret_key_file:-./secrets/app_secret_key}

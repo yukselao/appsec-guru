@@ -1,0 +1,140 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-9">
+    <ol class="wizard-steps" id="wzSteps">
+      <li class="active" data-step="1">Target</li>
+      <li data-step="2">Policy</li>
+      <li data-step="3">Plugin families</li>
+      <li data-step="4">Options</li>
+      <li data-step="5">Review &amp; launch</li>
+    </ol>
+
+    <div class="card">
+      <div class="card-body">
+        {# ---------------- 1. target ---------------- #}
+        <section class="wizard-pane active" data-pane="1">
+          <h2 class="h5">What do you want to scan?</h2>
+          <p class="text-body-secondary small">Enter the web application URL. The WAS scanner, not this browser, must be able to reach it.</p>
+          <div class="input-group input-group-lg mb-2">
+            <input class="form-control" id="fUrl" type="url" placeholder="http://192.168.1.82:3000" autocomplete="off">
+            <button class="btn btn-outline-secondary" type="button" id="btnReach">Check from scanner</button>
+          </div>
+          <div id="reachOut" class="small mb-3"></div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6"><label class="form-label" for="fName">Scan name <span class="text-body-secondary small">(optional)</span></label>
+              <input class="form-control" id="fName" placeholder="tscdbg-&lt;timestamp&gt;"></div>
+            <div class="col-md-6"><label class="form-label" for="fLabHost">Lab host for test apps</label>
+              <input class="form-control" id="fLabHost" placeholder="192.168.1.82"></div>
+          </div>
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tgApps" type="button">Test apps</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tgRecent" type="button">Recent targets</button></li>
+          </ul>
+          <div class="tab-content border border-top-0 rounded-bottom p-3">
+            <div class="tab-pane fade show active" id="tgApps"><div class="row row-cols-1 row-cols-md-2 row-cols-xxl-3 g-2" id="appPick"></div></div>
+            <div class="tab-pane fade" id="tgRecent"><div id="recentTargets" class="d-flex flex-wrap gap-2"><span class="empty">No scans yet.</span></div></div>
+          </div>
+        </section>
+
+        {# ---------------- 2. policy ---------------- #}
+        <section class="wizard-pane" data-pane="2">
+          <h2 class="h5">Pick a source policy</h2>
+          <p class="text-body-secondary small">The policy is never modified. When you change families or options, the cockpit scans with a copy.</p>
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pCards" type="button">Policies</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pCompare" type="button">Compare families</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pDetail" type="button">Selected policy settings</button></li>
+          </ul>
+          <div class="tab-content border border-top-0 rounded-bottom p-3">
+            <div class="tab-pane fade show active" id="pCards"><div class="row row-cols-1 row-cols-lg-2 g-2" id="polCards"><div class="empty">Loading policies…</div></div></div>
+            <div class="tab-pane fade" id="pCompare"><div class="table-responsive"><table class="table table-sm align-middle mb-0" id="polMatrix"></table></div></div>
+            <div class="tab-pane fade" id="pDetail"><div id="polDetail" class="small"><div class="empty">Pick a policy.</div></div></div>
+          </div>
+        </section>
+
+        {# ---------------- 3. families ---------------- #}
+        <section class="wizard-pane" data-pane="3">
+          <h2 class="h5">Which plugin families should run?</h2>
+          <p class="text-body-secondary small">Fewer families finish faster and make the debug log easier to read.</p>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <button class="btn btn-sm btn-outline-secondary" data-preset="policy">Same as the policy</button>
+            <button class="btn btn-sm btn-outline-secondary" data-preset="auth-inj">Authentication &amp; Injection</button>
+            <button class="btn btn-sm btn-outline-secondary" data-preset="inj">Injection only</button>
+            <button class="btn btn-sm btn-outline-secondary" data-preset="xss">XSS &amp; headers</button>
+            <button class="btn btn-sm btn-outline-secondary" data-preset="all">All families</button>
+            <button class="btn btn-sm btn-outline-secondary" data-preset="none">Clear</button>
+          </div>
+          <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-2" id="famCards"></div>
+          <div class="small text-body-secondary mt-2" id="famNote"></div>
+        </section>
+
+        {# ---------------- 4. options ---------------- #}
+        <section class="wizard-pane" data-pane="4">
+          <h2 class="h5">Scan options</h2>
+          <div class="mb-4">
+            <div class="form-label">Debug</div>
+            <div class="row row-cols-1 row-cols-md-2 g-2" id="optDebug">
+              {% for v, o in {'both': ['Full debug', 'Debug in the policy and DEBUG log level on the scanner. Best for troubleshooting.'],
+                               'host': ['Scanner log only', 'DEBUG log level on the scanner host. The service restarts before and after.'],
+                               'sc': ['Policy only', 'was_debug_mode in the copied policy. No service restart.'],
+                               'none': ['Off', 'Normal scan, info-level log.']} %}
+              <div class="col"><label class="card h-100 opt-card"><div class="card-body d-flex gap-2">
+                <input class="form-check-input mt-1" type="radio" name="debug" value="{{ v }}" {{ v == 'both' ? 'checked' : '' }}>
+                <div><div class="fw-semibold">{{ o[0] }}</div><div class="small text-body-secondary">{{ o[1] }}</div></div></div></label></div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="form-label">Scope</div>
+            <div class="row row-cols-1 row-cols-md-3 g-2" id="optScope">
+              {% for v, o in {'fast': ['Fast', '150 pages, depth 4, 45 minutes.'], 'policy': ['As in the policy', 'Keep the policy limits.'], 'custom': ['Custom', 'Set the page limit and time limit.']} %}
+              <div class="col"><label class="card h-100 opt-card"><div class="card-body d-flex gap-2">
+                <input class="form-check-input mt-1" type="radio" name="scope" value="{{ v }}" {{ v == 'fast' ? 'checked' : '' }}>
+                <div><div class="fw-semibold">{{ o[0] }}</div><div class="small text-body-secondary">{{ o[1] }}</div></div></div></label></div>
+              {% endfor %}
+            </div>
+            <div class="row g-2 mt-1 d-none" id="customScope">
+              <div class="col-sm-4"><label class="form-label small" for="fPages">Page limit</label><input class="form-control" id="fPages" type="number" value="300"></div>
+              <div class="col-sm-4"><label class="form-label small" for="fTimeout">Time limit (hh:mm:ss)</label><input class="form-control" id="fTimeout" value="01:00:00"></div>
+              <div class="col-sm-4"><label class="form-label small" for="fRps">Requests per second</label><input class="form-control" id="fRps" type="number" value="25"></div>
+            </div>
+          </div>
+          <div class="accordion" id="advOpts">
+            <div class="accordion-item">
+              <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#advBody">Advanced</button></h3>
+              <div id="advBody" class="accordion-collapse collapse"><div class="accordion-body"><div class="row g-3">
+                <div class="col-md-6"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="fKeep" checked><label class="form-check-label" for="fKeep">Keep the scan and the copied policy on Security Center</label></div></div>
+                <div class="col-sm-6 col-md-3"><label class="form-label small" for="fRepo">Repository id</label><input class="form-control" id="fRepo" placeholder="auto"></div>
+                <div class="col-sm-6 col-md-3"><label class="form-label small" for="fZone">Scan zone id</label><input class="form-control" id="fZone" placeholder="default"></div>
+                <div class="col-12"><label class="form-label small" for="fSet">Extra policy preferences (one name=value per line)</label><textarea class="form-control mono" id="fSet" rows="3" placeholder="was[http]request_timeout=20"></textarea></div>
+              </div></div></div>
+            </div>
+          </div>
+        </section>
+
+        {# ---------------- 5. review ---------------- #}
+        <section class="wizard-pane" data-pane="5">
+          <h2 class="h5">Review and launch</h2>
+          <div id="wzReview"></div>
+          <div id="wzLaunched" class="mt-3"></div>
+        </section>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        <button class="btn btn-outline-secondary" id="wzBack" disabled>Back</button>
+        <button class="btn btn-primary ms-auto" id="wzNext">Next</button>
+        <button class="btn btn-success d-none" id="wzLaunch">Launch scan</button>
+      </div>
+    </div>
+  </div>
+
+  {# ---------------- live summary ---------------- #}
+  <div class="col-xl-3">
+    <div class="card position-sticky" style="top: calc(var(--wt-header-h) + 1rem)">
+      <div class="card-header">Your scan</div>
+      <ul class="list-group list-group-flush small" id="wzSummary"></ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/testapps-catalog.js') }}"></script><script src="{{ asset('pages/scan.js') }}"></script>{% endblock %}

@@ -1,0 +1,11 @@
+{
+    "name": "local/was-troubleshooter-web",
+    "description": "Twig for the WAS Troubleshooter page templates",
+    "require": {
+        "php": ">=8.3",
+        "twig/twig": "^3.14"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

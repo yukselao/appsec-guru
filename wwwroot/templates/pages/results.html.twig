@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+{% if param == 'sc' and param2 %}
+<div id="scDetail" data-result="{{ param2 }}">
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <h2 class="h5 mb-0" id="sdTitle">Security Center result {{ param2 }}</h2><span id="sdStatus"></span>
+    <div class="ms-auto"><a class="btn btn-sm btn-outline-secondary" href="/scan-results#sc">Back to results</a></div>
+  </div>
+  <div class="row g-3 mb-3" id="sdCards"></div>
+  <div id="sdNotes"></div>
+  <div class="row g-3">
+    <div class="col-xl-8"><div class="card h-100"><div class="card-header">Findings</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+      <thead><tr><th>Plugin</th><th>Name</th><th>Severity</th><th>Family</th><th class="text-end">Count</th></tr></thead><tbody id="sdFind"><tr><td colspan="5" class="empty px-3">Loading…</td></tr></tbody></table></div></div></div></div>
+    <div class="col-xl-4"><div class="card h-100"><div class="card-header">Findings by severity</div><div class="card-body"><div class="chart-box"><canvas id="chSdSev"></canvas></div></div></div></div>
+  </div>
+</div>
+{% elseif param %}
+<div id="runDetail" data-run="{{ param }}">
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <h2 class="h5 mb-0" id="rdTitle">Run #{{ param }}</h2><span id="rdStatus"></span>
+    <div class="ms-auto d-flex flex-wrap gap-2">
+      <button class="btn btn-sm btn-outline-primary" id="rdLive" hidden>Live log</button>
+      <button class="btn btn-sm btn-primary" id="rdAnalyze">Analyze with AI</button>
+      <a class="btn btn-sm btn-outline-primary" id="rdReport" href="#" target="_blank" rel="noopener" hidden>Open HTML report</a>
+      <button class="btn btn-sm btn-outline-secondary" id="rdFindings">Refresh findings</button>
+      <a class="btn btn-sm btn-outline-secondary" id="rdDownload" href="/api/scans/{{ param }}/log/download">Download log</a>
+      <button class="btn btn-sm btn-outline-danger" id="rdCancel" hidden>Cancel</button>
+      <button class="btn btn-sm btn-outline-danger" id="rdDelete">Delete</button>
+    </div>
+  </div>
+  <div class="row g-3 mb-3" id="rdCards"></div>
+  <div id="rdAnalysis"></div>
+  <div class="row g-3 mb-3">
+    <div class="col-lg-4"><div class="card h-100"><div class="card-header">Log levels per minute</div><div class="card-body"><div class="chart-box"><canvas id="chLevels"></canvas></div></div></div></div>
+    <div class="col-lg-4"><div class="card h-100"><div class="card-header">Scan activity per minute</div><div class="card-body"><div class="chart-box"><canvas id="chActivity"></canvas></div></div></div></div>
+    <div class="col-lg-4"><div class="card h-100"><div class="card-header">Request rate (req/s)</div><div class="card-body"><div class="chart-box"><canvas id="chReqs"></canvas></div></div></div></div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-xl-7"><div class="card h-100"><div class="card-header">Findings</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+      <thead><tr><th>Plugin</th><th>Name</th><th>Severity</th><th>Family</th><th class="text-end">Count</th></tr></thead><tbody id="rdFind"></tbody></table></div></div></div></div>
+    <div class="col-xl-5"><div class="card h-100"><div class="card-header">Events</div><div class="card-body small mono" id="rdEvents" style="max-height:340px;overflow:auto"></div></div></div>
+  </div>
+  <div class="card">
+    <div class="card-header d-flex flex-wrap align-items-center gap-2">Captured scanner log
+      <input class="form-control form-control-sm ms-md-auto" style="max-width:260px" id="rlGrep" placeholder="regex">
+      <select class="form-select form-select-sm" style="max-width:150px" id="rlLevel"><option value="">all levels</option><option value="WARN,ERROR">WARN + ERROR</option><option value="INFO,NOTICE,WARN,ERROR">INFO and above</option></select>
+      <button class="btn btn-sm btn-outline-secondary" id="rlLoad">Apply</button>
+      <button class="btn btn-sm btn-outline-primary" id="rlAi">Ask AI</button>
+    </div>
+    <div class="card-body"><div class="small text-body-secondary mb-2" id="rlInfo"></div><div class="log-view" id="rlView" style="height:420px"></div></div>
+  </div>
+</div>
+{% else %}
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabRuns" type="button" role="tab">Started from this cockpit</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSc" type="button" role="tab" id="tabScBtn">All Security Center results</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tabRuns" role="tabpanel">
+    <div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+      <thead><tr><th>#</th><th>Name</th><th>Target</th><th>Families</th><th>Debug</th><th>Status</th><th>Duration</th><th>Findings</th><th>Log lines</th><th>Started</th></tr></thead>
+      <tbody id="runsBody"><tr><td colspan="10" class="empty px-3">Loading…</td></tr></tbody></table></div></div></div>
+  </div>
+  <div class="tab-pane fade" id="tabSc" role="tabpanel">
+    <div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+      <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th><th>Started</th><th>Duration</th><th></th></tr></thead>
+      <tbody id="scBody"><tr><td colspan="7" class="empty px-3">Loading…</td></tr></tbody></table></div></div></div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/results.js') }}"></script>{% endblock %}

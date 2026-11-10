@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<p class="text-body-secondary">Everything in this UI is backed by the <code>/api</code> REST API, so you can drive it from a terminal or CI.
+  Set <code>API</code> to this cockpit and copy the snippets. For scanner-side work on the host itself, the single-file tools
+  <code>tsc-was-debug-scanctl.py</code> and <code>tsc-was-scanmon.py</code> are also listed below.</p>
+
+<div class="card mb-3"><div class="card-body">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-5"><label class="form-label" for="dvApi">API base</label><input class="form-control" id="dvApi"></div>
+    <div class="col-md-5"><label class="form-label" for="dvTarget">Example target URL</label><input class="form-control" id="dvTarget" value="http://192.168.1.82:3000"></div>
+    <div class="col-md-2"><label class="form-label" for="dvPolicy">Policy id</label><input class="form-control" id="dvPolicy" value="1000002"></div>
+  </div>
+</div></div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#dvApiTab" type="button">REST API (curl)</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#dvCliTab" type="button">Scanner-host CLI</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="dvApiTab"><div id="dvApiCards"></div></div>
+  <div class="tab-pane fade" id="dvCliTab"><div id="dvCliCards"></div></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/devops.js') }}"></script>{% endblock %}

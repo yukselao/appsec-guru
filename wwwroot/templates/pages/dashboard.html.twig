@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div id="dashErr"></div>
+<div class="row g-3 mb-3">
+  {% for k, label in {'sc': 'Running on Security Center', 'scanner': 'Running on the scanner', 'chrome': 'Chrome processes', 'load': 'Scanner load (1 min)', 'mem': 'Scanner memory used', 'sast': 'SAST findings (last runs)'} %}
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card stat-card h-100"><div class="card-body">
+      <div class="value" data-stat="{{ k }}">–</div><div class="label">{{ label }}</div>
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Scanner log level</div>
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-2"><span class="fs-5 fw-semibold" id="dbgLevel">–</span><span class="badge text-bg-secondary" id="dbgSvc">–</span></div>
+        <p class="small text-body-secondary mb-3">Switching the level restarts the scanner service. It is refused while a scan is running.</p>
+        <div class="d-flex gap-2"><button class="btn btn-outline-warning btn-sm" data-debug="1">Enable debug</button><button class="btn btn-outline-secondary btn-sm" data-debug="0">Back to info</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header">DAST runs, last 14 days</div><div class="card-body"><div class="chart-box"><canvas id="chRuns"></canvas></div></div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header">Findings of recent DAST runs</div><div class="card-body"><div class="chart-box"><canvas id="chSev"></canvas></div></div></div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header d-flex align-items-center">Running scans <span class="small text-body-secondary fw-normal ms-2">click a row to open its live log</span>
+    <div class="ms-auto form-check form-switch small mb-0"><input class="form-check-input" type="checkbox" id="dashAuto" checked><label class="form-check-label" for="dashAuto">refresh every 5 s</label></div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+      <thead><tr><th>SC result</th><th>Name</th><th>Status</th><th>Elapsed</th><th>Scanner</th><th>Target</th><th>Scanner UUID</th><th></th></tr></thead>
+      <tbody id="dashRunning"><tr><td colspan="8" class="empty px-3">Loading…</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex">Recent DAST runs<a class="ms-auto small" href="/scan-results">All results</a></div>
+  <div class="card-body p-0">
+    <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+      <thead><tr><th>#</th><th>Name</th><th>Target</th><th>Status</th><th>Duration</th><th>Findings</th><th>Started</th></tr></thead>
+      <tbody id="dashRecent"></tbody>
+    </table></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/runningscans.js') }}"></script><script src="{{ asset('pages/dashboard.js') }}"></script>{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-4"><label class="form-label" for="lgScan">Scan</label><select class="form-select" id="lgScan"></select></div>
+      <div class="col-md-4"><label class="form-label" for="lgGrep">Server-side regex</label><input class="form-control" id="lgGrep" placeholder="e.g. Auditing page|plugin started"></div>
+      <div class="col-6 col-md-2"><label class="form-label" for="lgBack">Backlog lines</label><input class="form-control" id="lgBack" type="number" value="200" min="0" max="5000"></div>
+      <div class="col-6 col-md-2 d-flex gap-2"><button class="btn btn-primary flex-fill" id="lgStart">Start</button><button class="btn btn-outline-secondary flex-fill" id="lgStop" disabled>Stop</button></div>
+    </div>
+    <div class="d-flex flex-wrap gap-1 mt-3 align-items-center">
+      <span class="small text-body-secondary me-1">Quick filters:</span>
+      <span class="badge rounded-pill text-bg-light border chip" data-preset="Auditing page (starting|completed)|Page audit completed">Page audits</span>
+      <span class="badge rounded-pill text-bg-light border chip" data-preset="plugin (started|completed)">Plugin</span>
+      <span class="badge rounded-pill text-bg-light border chip" data-preset="Running job|added to the sitemap|Not adding">Crawl</span>
+      <span class="badge rounded-pill text-bg-light border chip" data-preset="autothrottle|req/s|request delay">Speed / throttle</span>
+      <span class="badge rounded-pill text-bg-light border chip" data-preset="\[(WARN|ERROR)\]">WARN + ERROR</span>
+      <span class="badge rounded-pill text-bg-light border chip" data-preset="processing scan|linked to|polling .* plugin set">Scanner lifecycle</span>
+      <span class="badge rounded-pill text-bg-light border chip" data-preset="">Everything</span>
+    </div>
+    <div class="d-flex flex-wrap gap-3 mt-3 align-items-center">
+      {% for lv in ['DEBUG', 'INFO', 'NOTICE', 'WARN', 'ERROR'] %}
+      <div class="form-check form-check-inline mb-0"><input class="form-check-input lv" type="checkbox" value="{{ lv }}" id="lv{{ lv }}" checked><label class="form-check-label small" for="lv{{ lv }}">{{ lv }}</label></div>
+      {% endfor %}
+      <input class="form-control form-control-sm ms-md-auto" style="max-width:260px" id="lgFind" placeholder="filter / highlight on screen (regex)">
+      <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="lgScroll" checked><label class="form-check-label small" for="lgScroll">auto-scroll</label></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-9">
+    <div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+      <span class="badge text-bg-secondary" id="lgState">off</span>
+      <span class="small text-body-secondary" id="lgCounts"></span>
+      <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" id="lgPause" disabled>Pause</button>
+        <button class="btn btn-sm btn-outline-secondary" id="lgClear">Clear</button>
+        <button class="btn btn-sm btn-outline-secondary" id="lgSave">Download</button>
+        <button class="btn btn-sm btn-outline-primary" id="lgAi">Ask AI</button>
+      </div>
+    </div>
+    <div class="log-view" id="lgView"></div>
+  </div>
+  <div class="col-xl-3">
+    <div class="card mb-3"><div class="card-header">Lines per 10 s</div><div class="card-body"><div class="chart-box" style="height:200px"><canvas id="chRate"></canvas></div></div></div>
+    <div class="card"><div class="card-header">Level mix</div><div class="card-body"><div class="chart-box" style="height:200px"><canvas id="chLv"></canvas></div></div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/logs.js') }}"></script>{% endblock %}
