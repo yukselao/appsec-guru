@@ -6,6 +6,27 @@ its **WAS (Web Application Scanning)** sensors, with an offensive AI assistant.
 > A Tenable Cyber Exchange project. Designed and developed with care by Ali Okan Yüksel.
 > If it saves you time: [buy me a coffee](https://buymeacoffee.com/ayuksel).
 
+## Demo
+
+![AppSec Guru demo](docs/demo.gif)
+
+A full-quality tour is in [`docs/demo.mp4`](docs/demo.mp4).
+
+### Screenshots
+
+| | |
+| --- | --- |
+| **Dashboard** — live scans, per-sensor scanner widgets, findings | ![Dashboard](docs/screenshots/dashboard.png) |
+| **Create Scan** — a guided wizard with built-in test apps | ![Create Scan](docs/screenshots/create-scan.png) |
+| **Scan Results** — offensive AI analysis and HTML report | ![Scan result](docs/screenshots/scan-result-ai.png) |
+| **Live Logs** — the scanner log, filtered to one scan | ![Logs](docs/screenshots/logs.png) |
+| **Subdomain Discovery** — subfinder → dnsx → httpx | ![Subdomains](docs/screenshots/subdomains.png) |
+| **Hidden Path Discovery** — ffuf content discovery | ![Hidden paths](docs/screenshots/hidden-paths.png) |
+| **Port Scan** — RustScan | ![Port scan](docs/screenshots/port-scan.png) |
+| **SAST Scan** — agentic source review | ![SAST](docs/screenshots/sast-scan.png) |
+| **Scans** — saved scan profiles with schedules | ![Scans](docs/screenshots/scans.png) |
+| **Sensors** — one Security Center, many WAS scanners | ![Sensors](docs/screenshots/sensors.png) |
+
 ## What it does
 
 | Area | Feature |
