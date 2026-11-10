@@ -18,13 +18,14 @@
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
       <h2 class="h5 mb-0" id="folderTitle">All scan profiles</h2>
       <span class="badge text-bg-secondary" id="profCount">0</span>
-      <div class="ms-auto d-flex gap-2">
-        <button class="btn btn-sm btn-outline-secondary" id="refreshProf">Refresh</button>
-        <button class="btn btn-sm btn-primary" id="newProfile">New scan profile</button>
+      <div class="ms-auto d-flex gap-2 align-items-center">
+        <input class="form-control form-control-sm" style="max-width:220px" id="profSearch" placeholder="Search profiles">
+        <button class="btn btn-sm btn-outline-secondary" id="refreshProf" title="Refresh">Refresh</button>
+        <button class="btn btn-sm btn-primary text-nowrap" id="newProfile">New scan profile</button>
       </div>
     </div>
     <div id="profErr"></div>
-    <div class="row row-cols-1 row-cols-xl-2 g-3" id="profCards"></div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xxl-3 g-3" id="profCards"></div>
   </div>
 </div>
 

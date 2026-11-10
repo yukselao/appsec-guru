@@ -3,6 +3,19 @@
   const S = {folders: [], families: [], policies: [], sensors: [], folder: 'all', step: 1, editing: null};
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+  const ICO = {
+    folder: '<svg class="ic" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+    all: '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    inbox: '<svg class="ic" viewBox="0 0 24 24"><path d="M3 12h5l2 3h4l2-3h5"/><path d="M3 12l3-7h12l3 7v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+    globe: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>',
+    clock: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    shield: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>',
+    sensor: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M7 7a7 7 0 0 0 0 10M17 7a7 7 0 0 1 0 10"/></svg>',
+    bug: '<svg class="ic" viewBox="0 0 24 24"><path d="M9 7a3 3 0 0 1 6 0M6 12h12M7 9c-2 0-3 1-3 3v2c0 3 3 5 8 5s8-2 8-5v-2c0-2-1-3-3-3"/><path d="M12 9v11"/></svg>',
+    play: '<svg class="ic" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>',
+    layers: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
+  };
+
   // ------------------------------------------------------------ folder tree
   function tree() {
     $.when(WT.get('/folders'), WT.get('/profiles?folder=all')).then((fr, pr) => {
@@ -10,13 +23,13 @@
       const counts = {}; pr[0].profiles.forEach(p => { counts[p.folder_id] = (counts[p.folder_id] || 0) + 1; });
       const kids = pid => S.folders.filter(f => f.parent_id === pid);
       const node = f => `<div class="folder-node ${S.folder == f.id ? 'active' : ''}" data-folder="${f.id}">
-        <span class="fl-name">📁 ${WT.esc(f.name)}</span><span class="badge text-bg-light border ms-1">${counts[f.id] || 0}</span>
+        <span class="fl-name">${ICO.folder} ${WT.esc(f.name)}</span><span class="badge rounded-pill text-bg-light border ms-1">${counts[f.id] || 0}</span>
         <span class="fl-actions"><a href="#" data-ren="${f.id}" title="Rename">✎</a> <a href="#" data-delf="${f.id}" title="Delete">✕</a></span>
         <div class="fl-children">${kids(f.id).map(node).join('')}</div></div>`;
       $('#folderTree').html(
-        `<div class="folder-node ${S.folder === 'all' ? 'active' : ''}" data-folder="all"><span class="fl-name">⊞ All profiles</span><span class="badge text-bg-light border ms-1">${pr[0].profiles.length}</span></div>` +
+        `<div class="folder-node ${S.folder === 'all' ? 'active' : ''}" data-folder="all"><span class="fl-name">${ICO.all} All profiles</span><span class="badge rounded-pill text-bg-light border ms-1">${pr[0].profiles.length}</span></div>` +
         kids(null).map(node).join('') +
-        `<div class="folder-node ${S.folder === 'unfiled' ? 'active' : ''}" data-folder="unfiled"><span class="fl-name">○ Unfiled</span><span class="badge text-bg-light border ms-1">${fr[0].unfiled}</span></div>`);
+        `<div class="folder-node ${S.folder === 'unfiled' ? 'active' : ''}" data-folder="unfiled"><span class="fl-name">${ICO.inbox} Unfiled</span><span class="badge rounded-pill text-bg-light border ms-1">${fr[0].unfiled}</span></div>`);
       profiles();
     }).catch(e => WT.fail(e));
   }
@@ -27,26 +40,47 @@
       const folderName = S.folder === 'all' ? 'All scan profiles' : S.folder === 'unfiled' ? 'Unfiled profiles'
         : (S.folders.find(f => f.id == S.folder) || {}).name || 'Profiles';
       $('#folderTitle').text(folderName);
-      $('#profCards').html(r.profiles.length ? r.profiles.map(card).join('')
-        : '<div class="col-12"><div class="empty">No profiles here. <a href="#" id="emptyNew">Create one</a>.</div></div>');
+      const q = ($('#profSearch').val() || '').toLowerCase();
+      const list = r.profiles.filter(p => !q || (p.name + ' ' + p.target_url).toLowerCase().includes(q));
+      $('#profCards').html(list.length ? list.map(card).join('')
+        : `<div class="col-12"><div class="profile-empty text-center py-5">
+            <div class="mb-2 text-body-secondary">${ICO.layers}</div>
+            <div class="fw-semibold">No scan profiles here</div>
+            <div class="small text-body-secondary mb-3">Create a reusable scan: a target, policy, families and a schedule.</div>
+            <button class="btn btn-primary btn-sm" id="emptyNew">New scan profile</button></div></div>`);
     }).catch(e => $('#profErr').html(`<div class="alert alert-danger">${WT.esc(e)}</div>`));
   }
+
   function card(p) {
     const last = p.last_run;
     const sensor = (S.sensors.find(s => s.id === p.sensor_id) || {}).name || 'default sensor';
-    return `<div class="col"><div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2"><span class="fw-semibold">${WT.esc(p.name)}</span>
-        ${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}
-        <span class="badge text-bg-light border ms-auto">${WT.esc(p.schedule_text)}</span></div>
+    const onDemand = (p.schedule || {}).type === 'on_demand' || !p.schedule;
+    const schedCls = !p.enabled ? 'text-bg-light border' : onDemand ? 'text-bg-light border' : 'sched-on';
+    const accent = !p.enabled ? 'is-off' : (last && last.active ? 'is-running' : 'is-on');
+    const meta = (icon, label, val) => `<div class="pm-item">${icon}<div><div class="pm-k">${label}</div><div class="pm-v">${val}</div></div></div>`;
+    return `<div class="col"><div class="card profile-card h-100 ${accent}">
       <div class="card-body">
-        <div class="small text-body-secondary mb-1">${WT.esc(p.description || '')}</div>
-        <div class="mono small text-truncate">${WT.esc(p.target_url)}</div>
-        <div class="small text-body-secondary mt-1">policy ${WT.esc(p.source_policy_id)} · ${p.families.length ? p.families.length + ' families' : 'policy families'} · ${WT.esc(sensor)} · debug ${WT.esc(p.debug_mode)}</div>
-        ${p.next_run_at ? `<div class="small mt-1">Next run: ${WT.dt(p.next_run_at)}</div>` : ''}
-        ${last ? `<div class="small mt-1">Last run: <a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''} ${last.findings ? '· ' + last.findings + ' findings' : ''}</div>` : ''}
+        <div class="d-flex align-items-start gap-2 mb-2">
+          <div class="min-w-0">
+            <div class="d-flex align-items-center gap-2"><h3 class="h6 mb-0 text-truncate">${WT.esc(p.name)}</h3>
+              ${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>
+            ${p.description ? `<div class="small text-body-secondary text-truncate">${WT.esc(p.description)}</div>` : ''}
+          </div>
+          <span class="badge rounded-pill ${schedCls} ms-auto text-nowrap">${ICO.clock} ${WT.esc(p.schedule_text)}</span>
+        </div>
+        <a class="profile-target d-flex align-items-center gap-1 text-truncate" href="/create-scan?target=${encodeURIComponent(p.target_url)}" title="${WT.esc(p.target_url)}">${ICO.globe}<span class="mono text-truncate">${WT.esc(p.target_url)}</span></a>
+        <div class="pm-grid mt-3">
+          ${meta(ICO.shield, 'Policy', WT.esc(p.source_policy_id) + ' · ' + (p.families.length ? p.families.length + ' families' : 'policy families'))}
+          ${meta(ICO.sensor, 'Sensor', WT.esc(sensor))}
+          ${meta(ICO.bug, 'Debug', WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode))}
+          ${meta(ICO.clock, p.next_run_at ? 'Next run' : 'Last run',
+            p.next_run_at ? WT.dt(p.next_run_at)
+              : (last ? `<a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}` : '—'))}
+        </div>
+        ${last ? `<div class="small text-body-secondary mt-2">Last run <a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''}${last.findings ? ' · ' + last.findings + ' findings' : ''}</div>` : ''}
       </div>
-      <div class="card-footer d-flex flex-wrap gap-2">
-        <button class="btn btn-sm btn-primary" data-run="${p.id}">Run now</button>
+      <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+        <button class="btn btn-sm btn-primary" data-run="${p.id}">${ICO.play} Run now</button>
         <button class="btn btn-sm btn-outline-secondary" data-edit="${p.id}">Edit</button>
         <button class="btn btn-sm btn-outline-secondary" data-toggle="${p.id}">${p.enabled ? 'Disable' : 'Enable'}</button>
         <button class="btn btn-sm btn-outline-secondary" data-copy="${p.id}">Copy</button>
@@ -168,6 +202,7 @@
       if (r.run_id) { location.href = '/scan-results/' + r.run_id; return; } tree(); }).catch(e => WT.fail(e));
   });
   $('#refreshProf').on('click', tree);
+  $('#profSearch').on('input', profiles);
 
   $.when(WT.get('/sc/families'), WT.get('/sc/policies'), WT.get('/sensors')).then((f, p, s) => {
     S.families = f[0].families; S.policies = p[0].policies; S.sensors = s[0].sensors; tree();
