@@ -137,7 +137,7 @@ body { background: var(--ag-bg); }
 /* Severity keeps meaning but in the palette's ink/teal/gray range */
 .stat-card .value { color: var(--ag-ink); }
 .wt-footer { background: #fff; }
-.wt-nav-foot { border-top: 1px solid var(--bs-border-color); padding-top: .4rem; margin-top: .4rem; }
+.wt-nav-foot { margin-top: auto; border-top: 1px solid var(--bs-border-color); padding-top: .4rem; }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-bs-theme="light"]) {
