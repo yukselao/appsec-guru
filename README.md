@@ -4,7 +4,7 @@ A self-hosted application-security cockpit around **Tenable Security Center** an
 its **WAS (Web Application Scanning)** sensors, with an offensive AI assistant.
 
 > A Tenable Cyber Exchange project. Designed and developed with care by Ali Okan Yüksel.
-> If it saves you time: [buy me a coffee](https://buymeacoffee.com/aliokanyuksel).
+> If it saves you time: [buy me a coffee](https://buymeacoffee.com/ayuksel).
 
 ## What it does
 
