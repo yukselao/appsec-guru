@@ -21,17 +21,17 @@
   function card(s) {
     return `<div class="col"><div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2"><span class="fw-semibold">${WT.esc(s.name)}</span>
-        ${s.is_default ? '<span class="badge text-bg-primary">default</span>' : ''}<span class="badge text-bg-light border ms-auto mono">${WT.esc(s.username)}@${WT.esc(s.host)}:${s.port}</span></div>
+        ${s.is_default ? '<span class="badge text-bg-primary">default</span>' : ''}
+        <span class="badge text-bg-light border ms-auto mono">${WT.esc(s.username)}@${WT.esc(s.host)}:${s.port}</span>
+        <a href="#" class="info-dot" tabindex="0" role="button" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-html="true"
+           data-bs-title="${WT.esc(DEBUG_HELP)}" aria-label="What does enabling scanner debug do?">i</a></div>
       <div class="card-body">
         <div class="small text-body-secondary">${WT.esc(s.description || '')}</div>
         <div class="small mt-1">log ${WT.esc(s.log_path)}${s.jump_host ? ' · jump ' + WT.esc(s.jump_host) : ''}${s.sc_scanner_name ? ' · SC scanner ' + WT.esc(s.sc_scanner_name) : ''}</div>
         <div class="d-flex align-items-center gap-2 mt-3 p-2 rounded border bg-body-tertiary">
           <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" id="dbg${s.id}" data-dbg="${s.id}" disabled>
             <label class="form-check-label small" for="dbg${s.id}">Scanner debug</label></div>
-          <span class="dbg-state small text-body-secondary" data-dbgstate="${s.id}">checking…</span>
-          <a href="#" class="ms-auto text-body-secondary" tabindex="0" role="button"
-             data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="${WT.esc(DEBUG_HELP)}" aria-label="What does enabling do?">
-             <svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none"/></svg></a>
+          <span class="dbg-state small text-body-secondary ms-auto" data-dbgstate="${s.id}">checking…</span>
         </div>
         <div class="small mt-1" data-status="${s.id}"></div>
       </div>

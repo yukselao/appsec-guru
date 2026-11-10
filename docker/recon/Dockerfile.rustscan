@@ -1,0 +1,10 @@
+# syntax=docker/dockerfile:1
+# rustscan over a standard TCP line protocol (socat): one request per connection,
+# complete stdout returned on EOF. Part of the deterministic OSS-tool contract.
+FROM rustscan/rustscan:latest
+USER root
+RUN apk add --no-cache socat
+COPY run-rustscan.sh /usr/local/bin/run.sh
+COPY serve-rustscan.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+ENTRYPOINT ["/usr/local/bin/serve.sh"]

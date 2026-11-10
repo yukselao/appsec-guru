@@ -13,14 +13,14 @@ from fastapi import APIRouter, Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
-from app import ai, conn, fuzz, profiles, runs, sensors
+from app import ai, conn, fuzz, portscan, profiles, recon, runs, sensors
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, ScanFolder, ScanProfile, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, ScanFolder, ScanProfile, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -45,6 +45,8 @@ try:
     sensors.seed_from_env()
     fuzz.ensure_builtin()
     fuzz.mark_orphans()
+    recon.mark_orphans()
+    portscan.mark_orphans()
     runs.resume_orphans()
     sast.mark_orphans()
     profiles.start_scheduler()
@@ -934,6 +936,86 @@ def fuzz_delete(run_id: int, req: Request):
         raise HTTPException(409, "cancel the running scan first")
     with session_scope() as s:
         s.execute(delete(FuzzRun).where(FuzzRun.id == run_id))
+    return {"deleted": run_id}
+
+
+# -------------------------------------------------- Subdomain Discovery
+@router.get("/subdomains")
+def subdomains_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [recon.row(r) for r in s.execute(select(SubdomainRun).order_by(desc(SubdomainRun.id)).limit(limit)).scalars()]}
+
+
+@router.post("/subdomains")
+def subdomains_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": recon.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/subdomains/{run_id}")
+def subdomains_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(SubdomainRun, run_id)
+        if not r:
+            raise HTTPException(404, "run not found")
+        return recon.row(r)
+
+
+@router.post("/subdomains/{run_id}/cancel")
+def subdomains_cancel(run_id: int, req: Request):
+    ok = recon.cancel(run_id)
+    st.audit("subdomain_run_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/subdomains/{run_id}")
+def subdomains_delete(run_id: int, req: Request):
+    if recon.is_active(run_id):
+        raise HTTPException(409, "cancel the running run first")
+    with session_scope() as s:
+        s.execute(delete(SubdomainRun).where(SubdomainRun.id == run_id))
+    return {"deleted": run_id}
+
+
+# -------------------------------------------------------- Port Scan (RustScan)
+@router.get("/portscan")
+def portscan_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [portscan.row(r) for r in s.execute(select(PortScanRun).order_by(desc(PortScanRun.id)).limit(limit)).scalars()]}
+
+
+@router.post("/portscan")
+def portscan_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": portscan.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/portscan/{run_id}")
+def portscan_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(PortScanRun, run_id)
+        if not r:
+            raise HTTPException(404, "run not found")
+        return portscan.row(r)
+
+
+@router.post("/portscan/{run_id}/cancel")
+def portscan_cancel(run_id: int, req: Request):
+    ok = portscan.cancel(run_id)
+    st.audit("port_scan_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/portscan/{run_id}")
+def portscan_delete(run_id: int, req: Request):
+    if portscan.is_active(run_id):
+        raise HTTPException(409, "cancel the running scan first")
+    with session_scope() as s:
+        s.execute(delete(PortScanRun).where(PortScanRun.id == run_id))
     return {"deleted": run_id}
 
 

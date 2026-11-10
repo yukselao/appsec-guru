@@ -7,7 +7,9 @@
   function render(d) {
     $('#dashErr').html(d.errors.map(e => `<div class="alert alert-warning py-2">${WT.esc(e)}</div>`).join(''));
     stat('sc', d.sc.length); stat('scanner', d.scans.filter(s => s.has_dir).length); stat('chrome', d.chrome);
+    stat('drivers', d.drivers);
     stat('load', d.load ? d.load.load.split(' ')[0] : null); stat('mem', d.load ? d.load.mem.split('/')[0] + ' MB' : null);
+    $('#dashSensorState').text((d.sensor && d.sensor.name) ? d.sensor.name : '');
     const dbg = d.debug || {};
     $('#dbgLevel').text((dbg.level || '–').replace('(varsayilan)', '(default)'));
     $('#dbgSvc').attr('class', 'badge text-bg-' + (dbg.active === 'active' ? 'success' : 'danger')).text(dbg.active ? 'service ' + dbg.active : '–');
@@ -55,6 +57,7 @@
   $(document).on('wt:refresh', load);
   $(document).on('wt:theme', () => { [chRuns, chSev].forEach(c => c && c.destroy()); chRuns = chSev = null; load(); });
 
+  WT.sensorSelect('#dashSensor', {hideWhenSingle: false, onChange: load});
   load();
   setInterval(() => { if ($('#dashAuto').prop('checked') && !document.hidden) load(); }, 5000);
 })(jQuery, window.WT);

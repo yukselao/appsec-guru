@@ -13,3 +13,7 @@ __pycache__/
 !/data/*/.gitkeep
 !/data/wordlists/
 !/data/sast/
+
+# Claude working files — not published
+CLAUDE.md
+.claude/

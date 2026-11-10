@@ -62,6 +62,10 @@ services:
       RUNS_DIR: /var/log/was-troubleshooter/runs
       AI_DIR: /ai
       SAST_DIR: /var/lib/was-troubleshooter/sast
+      RECON_SUBFINDER: recon-subfinder:7001
+      RECON_DNSX: recon-dnsx:7002
+      RECON_HTTPX: recon-httpx:7003
+      RECON_RUSTSCAN: recon-rustscan:7004
       REPORT_DIR: /var/log/was-troubleshooter/reports
       WORDLIST_DIR: /var/lib/was-troubleshooter/wordlists
       TZ: ${tz:-Europe/Istanbul}
@@ -132,6 +136,34 @@ services:
       - api
     networks:
       - wastroubleshooter
+    restart: unless-stopped
+
+
+  # ---- Hidden Path & recon tools, each in its own container, exposed over TCP
+  # with socat so the api can chain subfinder -> dnsx -> httpx (no Docker socket).
+  recon-subfinder:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.subfinder}
+    image: was-troubleshooter-subfinder
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+
+  recon-dnsx:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.dnsx}
+    image: was-troubleshooter-dnsx
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+
+  recon-httpx:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.httpx}
+    image: was-troubleshooter-httpx
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+
+
+  recon-rustscan:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.rustscan}
+    image: was-troubleshooter-rustscan
+    networks: [wastroubleshooter]
     restart: unless-stopped
 
 networks:

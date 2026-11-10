@@ -36,7 +36,8 @@
       'was[plugin][rate_limiter]requests_per_second=' + ($('#fRps').val() || 25));
     return {url: $('#fUrl').val().trim(), name: $('#fName').val().trim(), policy: st.policy ? st.policy.id : null,
       families: [...st.picked], fast: scope() === 'fast', debug: debugMode(), keep: $('#fKeep').prop('checked'),
-      repo: $('#fRepo').val() ? parseInt($('#fRepo').val(), 10) : null, zone: $('#fZone').val() ? parseInt($('#fZone').val(), 10) : null, set};
+      repo: $('#fRepo').val() ? parseInt($('#fRepo').val(), 10) : null, zone: $('#fZone').val() ? parseInt($('#fZone').val(), 10) : null,
+      sensor_id: $('#fSensor').val() || null, set};
   }
   function famNames(ids) { return (ids || []).map(id => (st.families.find(f => f.id === id) || {}).name || id); }
   function summary() {
@@ -170,6 +171,7 @@
   const qs = new URLSearchParams(location.search);
   if (qs.get('target')) $('#fUrl').val(qs.get('target'));
   renderApps();
+  WT.sensorSelect('#fSensor', {hideWhenSingle: false});
   $.when(WT.get('/sc/families'), WT.get('/sc/policies?detail=1')).then((f, p) => {
     st.families = f[0].families; st.policies = p[0].policies;
     renderPolicies(); renderFamilies();

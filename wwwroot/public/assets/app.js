@@ -5,8 +5,28 @@
 
   WT.esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
+  // The active sensor is chosen on each page (in its form/controls), not a global widget.
+  WT._sensor = (function () { try { return localStorage.getItem('wt-sensor') || ''; } catch (e) { return ''; } })();
+  WT.sensor = function () { return WT._sensor || ''; };
+  WT.setSensor = function (id) { WT._sensor = id ? String(id) : ''; try { localStorage.setItem('wt-sensor', WT._sensor); } catch (e) { /* ignore */ } };
+  // Fills a <select> with sensors and remembers the choice; opts.onChange(id) fires on change.
+  WT.sensorSelect = function (el, opts) {
+    opts = opts || {};
+    return WT.get('/sensors').then(r => {
+      const list = r.sensors || []; const $el = $(el);
+      if (!list.length) { $el.closest('[data-sensor-wrap]').addClass('d-none'); return list; }
+      const cur = WT.sensor(); const def = (list.find(x => x.is_default) || list[0] || {});
+      const val = cur && list.some(x => String(x.id) === cur) ? cur : String(def.id);
+      $el.html(list.map(x => `<option value="${x.id}">${WT.esc(x.name)}${x.is_default ? ' (default)' : ''}</option>`).join('')).val(val);
+      WT.setSensor(val);
+      if (list.length < 2 && opts.hideWhenSingle) $el.closest('[data-sensor-wrap]').addClass('d-none');
+      $el.off('change.wtsensor').on('change.wtsensor', function () { WT.setSensor(this.value); if (opts.onChange) opts.onChange(this.value); });
+      return list;
+    });
+  };
   WT.api = function (method, path, data) {
-    return $.ajax({url: '/api' + path, method: method, contentType: 'application/json', dataType: 'json',
+    const headers = {}; const sid = WT.sensor(); if (sid) headers['X-Sensor'] = sid;
+    return $.ajax({url: '/api' + path, method: method, contentType: 'application/json', dataType: 'json', headers: headers,
       data: data === undefined ? undefined : JSON.stringify(data)})
       .catch(xhr => {
         const msg = (xhr.responseJSON && (xhr.responseJSON.detail || xhr.responseJSON.error)) || xhr.statusText || 'request failed';

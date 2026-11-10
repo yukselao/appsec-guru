@@ -3,8 +3,9 @@
 <div class="card mb-3">
   <div class="card-body">
     <div class="row g-2 align-items-end">
+      <div class="col-md-3" data-sensor-wrap><label class="form-label" for="lgSensor">Scanner sensor</label><select class="form-select" id="lgSensor"></select></div>
       <div class="col-md-4"><label class="form-label" for="lgScan">Scan</label><select class="form-select" id="lgScan"></select></div>
-      <div class="col-md-4"><label class="form-label" for="lgGrep">Server-side regex</label><input class="form-control" id="lgGrep" placeholder="e.g. Auditing page|plugin started"></div>
+      <div class="col-md-3"><label class="form-label" for="lgGrep">Server-side regex</label><input class="form-control" id="lgGrep" placeholder="e.g. Auditing page|plugin started"></div>
       <div class="col-6 col-md-2"><label class="form-label" for="lgBack">Backlog lines</label><input class="form-control" id="lgBack" type="number" value="200" min="0" max="5000"></div>
       <div class="col-6 col-md-2 d-flex gap-2"><button class="btn btn-primary flex-fill" id="lgStart">Start</button><button class="btn btn-outline-secondary flex-fill" id="lgStop" disabled>Stop</button></div>
     </div>

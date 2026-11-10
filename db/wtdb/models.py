@@ -236,3 +236,34 @@ class FuzzRun(Base):
     stats = Column(JSONB, nullable=False, server_default="{}")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     finished_at = Column(DateTime(timezone=True))
+
+
+class SubdomainRun(Base):
+    """A subdomain discovery run: subfinder -> dnsx -> httpx."""
+    __tablename__ = "subdomain_runs"
+    id = Column(Integer, primary_key=True)
+    domain = Column(String(255), nullable=False)
+    status = Column(String(20), nullable=False, server_default="pending")
+    stage = Column(String(20))
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    subdomains = Column(JSONB, nullable=False, server_default="[]")
+    results = Column(JSONB, nullable=False, server_default="[]")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
+
+
+class PortScanRun(Base):
+    """A RustScan port scan of one target."""
+    __tablename__ = "port_scan_runs"
+    id = Column(Integer, primary_key=True)
+    target = Column(String(255), nullable=False)
+    ports = Column(String(200))
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="[]")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))

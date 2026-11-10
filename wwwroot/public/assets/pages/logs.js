@@ -44,6 +44,7 @@
   function start() {
     stop();
     const p = new URLSearchParams({uuid: $('#lgScan').val(), grep: $('#lgGrep').val(), backlog: $('#lgBack').val() || '200'});
+    if (WT.sensor()) p.set('sensor', WT.sensor());
     es = new EventSource('/api/logs/stream?' + p.toString());
     state('connecting', 'warning');
     es.onopen = () => { state('live', 'success'); WT.toast('Log stream connected'); };
@@ -112,6 +113,7 @@
   window.addEventListener('beforeunload', stop);
 
   charts();
+  WT.sensorSelect('#lgSensor', {hideWhenSingle: true, onChange: () => { stop(); scans(); }});
   const want = (new URLSearchParams(location.search)).get('uuid');
   scans(want).then(() => { if (want) start(); });
 })(jQuery, window.WT);

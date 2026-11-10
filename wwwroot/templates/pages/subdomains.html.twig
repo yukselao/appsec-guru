@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header">New discovery</div>
+      <div class="card-body">
+        <p class="small text-body-secondary">Passive subdomain enumeration with <b>subfinder</b>, DNS resolution with
+          <b>dnsx</b>, and live HTTP probing with <b>httpx</b> — each in its own container.</p>
+        <form id="sdForm">
+          <label class="form-label" for="sdDomain">Domain</label>
+          <input class="form-control mb-2" id="sdDomain" placeholder="example.com">
+          <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="sdResolve" checked><label class="form-check-label" for="sdResolve">Resolve DNS (dnsx): A, AAAA, CNAME, MX, NS, TXT</label></div>
+          <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="sdHttp" checked><label class="form-check-label" for="sdHttp">Probe HTTP (httpx): status, title, tech</label></div>
+          <label class="form-label" for="sdTimeout">Per-stage timeout (s)</label>
+          <input class="form-control mb-3" id="sdTimeout" type="number" value="300" min="60" max="900">
+          <button class="btn btn-primary w-100" type="submit" id="sdGo">Start discovery</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Recent runs</div>
+      <div class="card-body p-0"><ul class="list-group list-group-flush small" id="sdRuns"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Results <span id="sdState" class="ms-2"></span>
+        <div class="ms-auto d-flex gap-2"><input class="form-control form-control-sm" style="max-width:200px" id="sdSearch" placeholder="filter">
+          <select class="form-select form-select-sm" style="max-width:150px" id="sdFilter"><option value="">all</option><option value="live">live HTTP only</option><option value="resolved">resolved only</option></select>
+          <button class="btn btn-sm btn-outline-secondary" id="sdExport" disabled>Export</button>
+          <button class="btn btn-sm btn-outline-danger" id="sdCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-3 mb-2" id="sdStats"></div>
+        <div class="recon-stages mb-2" id="sdStages"></div>
+        <div class="table-responsive" style="max-height:60vh;overflow:auto"><table class="table table-sm table-hover align-middle mb-0">
+          <thead class="position-sticky top-0"><tr><th>Subdomain</th><th>A / CNAME</th><th>HTTP</th><th>Title · Tech</th></tr></thead>
+          <tbody id="sdResults"><tr><td colspan="4" class="empty px-3">Start a discovery to list subdomains.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/subdomains.js') }}"></script>{% endblock %}

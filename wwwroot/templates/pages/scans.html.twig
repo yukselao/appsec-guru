@@ -2,7 +2,7 @@
 {% block content %}
 <div class="row g-3">
   {# ---------------- folder tree ---------------- #}
-  <div class="col-lg-3">
+  <div class="col-lg-3 col-xl-2">
     <div class="card">
       <div class="card-header d-flex align-items-center">Folders<button class="btn btn-sm btn-outline-secondary ms-auto" id="newFolder" title="New folder">+</button></div>
       <div class="card-body p-2"><div id="folderTree" class="small"></div></div>
@@ -14,7 +14,7 @@
   </div>
 
   {# ---------------- profiles ---------------- #}
-  <div class="col-lg-9">
+  <div class="col-lg-9 col-xl-10">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
       <h2 class="h5 mb-0" id="folderTitle">All scan profiles</h2>
       <span class="badge text-bg-secondary" id="profCount">0</span>
@@ -25,7 +25,7 @@
       </div>
     </div>
     <div id="profErr"></div>
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xxl-3 g-3" id="profCards"></div>
+    <div class="auto-grid" id="profCards"></div>
   </div>
 </div>
 

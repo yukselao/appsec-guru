@@ -30,7 +30,7 @@ body { background: var(--bs-tertiary-bg); }
 .wt-header { position: sticky; top: 0; z-index: 1020; height: var(--wt-header-h); display: flex; align-items: center; gap: .75rem;
   padding: 0 1.25rem; background: var(--bs-body-bg); border-bottom: 1px solid var(--bs-border-color); }
 .wt-title { font-size: 1.15rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wt-content { padding: 1.25rem; flex: 1; min-width: 0; }
+.wt-content { padding: 1.25rem; flex: 1; min-width: 0; width: 100%; max-width: 1640px; margin: 0 auto; }
 @media (max-width: 575.98px) { .wt-content { padding: .85rem; } .wt-header { padding: 0 .85rem; } }
 .wt-conn { font-weight: 500; }
 
@@ -186,3 +186,20 @@ body { background: var(--ag-bg); }
 .profile-card .btn .ic { width: 13px; height: 13px; }
 .profile-empty .ic { width: 34px; height: 34px; }
 @media (max-width: 420px) { .pm-grid { grid-template-columns: 1fr; } }
+
+/* ---------- info dot (i) ---------- */
+.info-dot { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none;
+  border: 1px solid var(--ag-gray); color: var(--ag-gray); border-radius: 50%; font: 600 11px/1 Georgia, serif;
+  text-decoration: none; cursor: help; }
+.info-dot:hover { border-color: var(--ag-teal); color: var(--ag-teal-dark); background: var(--ag-teal-soft); }
+
+/* ---------- recon stages ---------- */
+.recon-stages { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.recon-stage { font-size: .8rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--bs-border-color); color: var(--bs-secondary-color); }
+.recon-stage.active { border-color: var(--ag-teal); color: var(--ag-teal-dark); background: var(--ag-teal-soft); font-weight: 600; }
+.recon-stage.done { border-color: var(--ag-teal); color: #fff; background: var(--ag-teal); }
+.recon-arrow { color: var(--bs-secondary-color); }
+.list-group-item.active-row { background: var(--ag-teal-soft); }
+
+#profCards.auto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 1rem; }
+#profCards.auto-grid > .col { width: auto; }
