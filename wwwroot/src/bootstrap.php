@@ -8,12 +8,12 @@ require '/opt/app/vendor/autoload.php';
 // Sidebar order. 'group' prints a section heading above a group's first item.
 const PAGES = [
     'dashboard'        => ['title' => 'Dashboard', 'icon' => 'speedometer', 'template' => 'pages/dashboard.html.twig'],
-    'hidden-paths'     => ['title' => 'Hidden Path Discovery', 'icon' => 'search', 'template' => 'pages/fuzz.html.twig'],
-    'scans'            => ['title' => 'Scans', 'group' => 'DAST', 'icon' => 'radar', 'template' => 'pages/scans.html.twig'],
-    'create-scan'      => ['title' => 'Create Scan', 'group' => 'DAST', 'icon' => 'plus', 'template' => 'pages/scan.html.twig', 'hidden' => true],
-    'logs'             => ['title' => 'Logs', 'group' => 'DAST', 'icon' => 'terminal', 'template' => 'pages/logs.html.twig'],
-    'scan-results'     => ['title' => 'Scan Results', 'group' => 'DAST', 'icon' => 'list', 'template' => 'pages/results.html.twig'],
-    'deploy-test-apps' => ['title' => 'Deploy Test Apps', 'group' => 'DAST', 'icon' => 'box', 'template' => 'pages/testapps.html.twig'],
+    'hidden-paths'     => ['title' => 'Hidden Path Discovery', 'group' => 'Open Source Tools', 'icon' => 'search', 'template' => 'pages/fuzz.html.twig'],
+    'scans'            => ['title' => 'Scans', 'group' => 'Tenable Web App Scanning', 'icon' => 'radar', 'template' => 'pages/scans.html.twig'],
+    'create-scan'      => ['title' => 'Create Scan', 'group' => 'Tenable Web App Scanning', 'icon' => 'plus', 'template' => 'pages/scan.html.twig', 'hidden' => true],
+    'logs'             => ['title' => 'Logs', 'group' => 'Tenable Web App Scanning', 'icon' => 'terminal', 'template' => 'pages/logs.html.twig'],
+    'scan-results'     => ['title' => 'Scan Results', 'group' => 'Tenable Web App Scanning', 'icon' => 'list', 'template' => 'pages/results.html.twig'],
+    'deploy-test-apps' => ['title' => 'Deploy Test Apps', 'group' => 'Tenable Web App Scanning', 'icon' => 'box', 'template' => 'pages/testapps.html.twig'],
     'sast-scan'        => ['title' => 'SAST Scan', 'group' => 'SAST', 'icon' => 'code', 'template' => 'pages/sast.html.twig'],
     'devops'           => ['title' => 'DevOps', 'group' => 'DevOps', 'icon' => 'cli', 'template' => 'pages/devops.html.twig'],
     'sensors'          => ['title' => 'Sensors', 'icon' => 'broadcast', 'template' => 'pages/sensors.html.twig', 'foot' => true],
