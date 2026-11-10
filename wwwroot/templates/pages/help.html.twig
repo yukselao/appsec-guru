@@ -1,0 +1,173 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-3">
+    <div class="card position-sticky" style="top: calc(var(--wt-header-h) + 1rem)">
+      <div class="card-header">On this page</div>
+      <div class="list-group list-group-flush small" id="helpToc">
+        <a class="list-group-item list-group-item-action" href="#overview">Overview</a>
+        <a class="list-group-item list-group-item-action" href="#pipeline">How a scan works</a>
+        <a class="list-group-item list-group-item-action" href="#scope">Scope &amp; the Fast preset</a>
+        <a class="list-group-item list-group-item-action" href="#families">Plugin families</a>
+        <a class="list-group-item list-group-item-action" href="#debug">Debug &amp; logs</a>
+        <a class="list-group-item list-group-item-action" href="#fuzz">Hidden Path Discovery</a>
+        <a class="list-group-item list-group-item-action" href="#sast">SAST &amp; the AI harness</a>
+        <a class="list-group-item list-group-item-action" href="#ai">AI analysis &amp; assistant</a>
+        <a class="list-group-item list-group-item-action" href="#sensors">Sensors &amp; settings</a>
+        <a class="list-group-item list-group-item-action" href="#api">REST API</a>
+        <a class="list-group-item list-group-item-action" href="#refs">Reference links</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-9" id="helpBody">
+
+    <section id="overview" class="mb-4">
+      <h2 class="h4">AppSec Guru</h2>
+      <p>A cockpit around <b>Tenable Security Center</b> and its <b>WAS (Web Application Scanning)</b> sensors, plus
+        content discovery (ffuf), source review (SAST) and an offensive AI assistant. It drives real scanners and
+        starts real scans, so only point it at systems you are authorised to test.</p>
+      <p class="text-body-secondary">A Tenable Cyber Exchange project by Ali Okan Yüksel ·
+        <a href="https://buymeacoffee.com/aliokanyuksel" target="_blank" rel="noopener">buy me a coffee</a>.</p>
+    </section>
+
+    <section id="pipeline" class="mb-4">
+      <h3 class="h5">How a scan works</h3>
+      <ol>
+        <li>You pick a target, a source policy and plugin families in <a href="/create-scan">Create Scan</a> (or save them as a profile in <a href="/scans">Scans</a>).</li>
+        <li>The cockpit <b>copies</b> the policy (the original is never changed), enables the families and writes the scope preferences.</li>
+        <li>It launches the scan on Security Center, which hands it to a WAS sensor.</li>
+        <li>It opens an ssh stream to that sensor and captures <b>only this scan's</b> log lines (matched by the <code>[scanUuid=…]</code> tag) into a file and per-minute charts.</li>
+        <li>When the scan finishes it pulls the findings, reverts the debug level and (unless you kept them) deletes the temporary scan and policy copy.</li>
+      </ol>
+    </section>
+
+    <section id="scope" class="mb-4">
+      <h3 class="h5">Scope &amp; the <span class="badge text-bg-primary">Fast</span> preset</h3>
+      <p>Scope controls how much of the site the crawler covers and how long it may run. The three choices in the
+        wizard map to policy preferences:</p>
+      <ul>
+        <li><b>Fast</b> — a built-in preset defined in the tool (not a Security Center setting). It overrides the copied policy with the values below so a test scan finishes in minutes.</li>
+        <li><b>As in the policy</b> — the copied policy's own limits are kept untouched.</li>
+        <li><b>Custom</b> — you set the page limit, time limit and request rate directly.</li>
+      </ul>
+      <p class="mb-1">The <b>Fast</b> preset writes these WAS preferences:</p>
+      <div class="table-responsive"><table class="table table-sm">
+        <thead><tr><th>Preference</th><th>Fast value</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">was[scope]page_limit</td><td>150</td><td>max pages crawled</td></tr>
+          <tr><td class="mono">was[scope]directory_depth_limit</td><td>4</td><td>how deep into directories</td></tr>
+          <tr><td class="mono">was[scope]dom_depth_limit</td><td>3</td><td>how deep into the DOM / SPA</td></tr>
+          <tr><td class="mono">was_timeout</td><td>00:45:00</td><td>overall time limit</td></tr>
+          <tr><td class="mono">was[http]request_concurrency</td><td>10</td><td>parallel requests</td></tr>
+          <tr><td class="mono">was[assessment][bruteforce]enable</td><td>no</td><td>login bruteforce stays off</td></tr>
+        </tbody></table></div>
+      <p class="small text-body-secondary">Source: the <code>FAST_PREFS</code> map in the tool's WAS helpers
+        (<code>api/wastools/core.py</code>, shared with the <code>tsc-was-debug-scanctl.py</code> CLI). Edit it there to change the preset.
+        A full WAS scan with no preset uses the policy's defaults (typically 10 000 pages, 8-hour timeout).</p>
+    </section>
+
+    <section id="families" class="mb-4">
+      <h3 class="h5">Plugin families</h3>
+      <p>WAS groups its checks into 14 families (Authentication &amp; Session, Injection, Cross Site Scripting,
+        SSL/TLS, HTTP Security Header, Data Exposure, and so on). Enabling fewer families makes a scan finish
+        faster and keeps the debug log readable. If you select none, the copied policy's own families run.
+        The <b>Policy</b> step in the wizard shows which families each policy already has and lets you compare them.</p>
+    </section>
+
+    <section id="debug" class="mb-4">
+      <h3 class="h5">Debug &amp; logs</h3>
+      <ul>
+        <li><b>Policy debug</b> sets <code>was_debug_mode=yes</code> in the copied policy: the scan writes extra plugin output. No service restart.</li>
+        <li><b>Scanner-host debug</b> raises the sensor's <code>WAS_LOG_LEVEL</code> to DEBUG. This restarts the scanner service, so it is refused while another scan is running, and it is reverted when the scan ends.</li>
+      </ul>
+      <p>The <a href="/logs">Logs</a> page streams the sensor log live (Server-Sent Events) filtered to one scan, with
+        level toggles, quick filters (page audits, plugins, crawl, throttle, warnings, lifecycle) and per-10-second
+        charts. Every run also keeps its captured log on the <a href="/scan-results">Scan Results</a> detail page.</p>
+    </section>
+
+    <section id="fuzz" class="mb-4">
+      <h3 class="h5">Hidden Path Discovery</h3>
+      <p>Content discovery with <a href="https://github.com/ffuf/ffuf" target="_blank" rel="noopener">ffuf</a>: it requests
+        every word from a wordlist against the target and keeps the responses whose status code matches. Put
+        <code>FUZZ</code> where paths should be tried, or leave it off to append <code>/FUZZ</code>. Three wordlists ship
+        built in (common paths, API endpoints, backup files); you can upload your own. Use <b>filter codes</b> to drop a
+        catch-all status (single-page apps often return 200 for everything).</p>
+    </section>
+
+    <section id="sast" class="mb-4">
+      <h3 class="h5">SAST &amp; the AI harness</h3>
+      <p>The <a href="/sast-scan">SAST Scan</a> clones a Git repository, extracts every function with its parameters and
+        the dangerous sinks it reaches, ranks them, and the <b>offensive-security agent</b> reviews each argument from
+        source to sink with the local LLM, using tools to follow callees and sanitizers. The agent's behaviour is defined
+        in Markdown under <code>ai/</code> (<code>agents/</code>, <code>skills/</code>, <code>tools/</code>), read at run time —
+        edit a file and the next run uses it. Function-level review suits structured code; vulnerabilities written as
+        top-level script statements may not be captured as functions.</p>
+    </section>
+
+    <section id="ai" class="mb-4">
+      <h3 class="h5">AI analysis &amp; assistant</h3>
+      <p>On a finished run, <b>Analyze with AI</b> runs the offensive-security agent over the findings. It returns attack
+        paths, categories, a reconnaissance table built from <i>informational</i> plugins (detected technologies, exposed
+        tokens, API endpoints) and quick wins, and renders a standalone <b>HTML report</b>. The <b>AI assistant</b> chat
+        (top-right on every page) talks to the same Ollama model; attach the on-screen log, WARN/ERROR only, or the scan
+        status and ask about it. Both need an Ollama URL and model in <a href="/settings">Settings</a>; a model that lists
+        <code>tools</code> works best, but a plain model still works in JSON mode.</p>
+    </section>
+
+    <section id="sensors" class="mb-4">
+      <h3 class="h5">Sensors &amp; settings</h3>
+      <p>One Security Center, any number of WAS scanner hosts. Each <a href="/sensors">sensor</a> is a reusable ssh
+        profile (host, credentials, log path, optional jump host). A scan profile can pick a sensor; otherwise the
+        default sensor is used. All connection details come from <code>.env</code> first and can be overridden and tested
+        in <a href="/settings">Settings</a>; secrets are stored encrypted.</p>
+    </section>
+
+    <section id="api" class="mb-4">
+      <h3 class="h5">REST API</h3>
+      <p>Everything here is backed by the <code>/api</code> REST API. The <a href="/devops">DevOps</a> page has copy-paste
+        <code>curl</code> recipes for starting scans, listing running scans, fetching logs, running the AI analysis,
+        discovery and SAST. The interactive API docs are at <a href="/api/docs" target="_blank" rel="noopener">/api/docs</a>.</p>
+    </section>
+
+    <section id="refs" class="mb-4">
+      <h3 class="h5">Reference links</h3>
+      <div class="row row-cols-1 row-cols-md-2 g-3">
+        <div class="col"><div class="card h-100"><div class="card-header">Tenable WAS &amp; Security Center</div><ul class="list-group list-group-flush small">
+          <li class="list-group-item"><a href="https://docs.tenable.com/security-center.htm" target="_blank" rel="noopener">Security Center documentation</a></li>
+          <li class="list-group-item"><a href="https://docs.tenable.com/security-center/api/index.htm" target="_blank" rel="noopener">Security Center API reference</a></li>
+          <li class="list-group-item"><a href="https://docs.tenable.com/security-center/api/WAS-Scan.htm" target="_blank" rel="noopener">WAS Scan API (launch, copy, delete)</a></li>
+          <li class="list-group-item"><a href="https://docs.tenable.com/security-center/api/Scan-Result.htm" target="_blank" rel="noopener">Scan Result API (status, stop, download)</a></li>
+          <li class="list-group-item"><a href="https://docs.tenable.com/web-app-scanning.htm" target="_blank" rel="noopener">Web Application Scanning docs</a></li>
+          <li class="list-group-item"><a href="https://docs.tenable.com/tenable-core.htm" target="_blank" rel="noopener">Tenable Core (sensor appliance)</a></li>
+        </ul></div></div>
+        <div class="col"><div class="card h-100"><div class="card-header">Tooling</div><ul class="list-group list-group-flush small">
+          <li class="list-group-item"><a href="https://github.com/ffuf/ffuf" target="_blank" rel="noopener">ffuf — content discovery</a></li>
+          <li class="list-group-item"><a href="https://ollama.com" target="_blank" rel="noopener">Ollama — local LLM runtime</a></li>
+          <li class="list-group-item"><a href="https://ollama.com/search?c=tools" target="_blank" rel="noopener">Ollama tool-capable models</a></li>
+          <li class="list-group-item"><a href="https://pytenable.readthedocs.io" target="_blank" rel="noopener">pyTenable — Python SDK</a></li>
+          <li class="list-group-item"><a href="https://fastapi.tiangolo.com" target="_blank" rel="noopener">FastAPI</a> · <a href="https://alembic.sqlalchemy.org" target="_blank" rel="noopener">Alembic</a></li>
+        </ul></div></div>
+        <div class="col"><div class="card h-100"><div class="card-header">Standards &amp; guidance</div><ul class="list-group list-group-flush small">
+          <li class="list-group-item"><a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank" rel="noopener">OWASP Web Security Testing Guide</a></li>
+          <li class="list-group-item"><a href="https://owasp.org/Top10/" target="_blank" rel="noopener">OWASP Top 10</a></li>
+          <li class="list-group-item"><a href="https://owasp.org/API-Security/editions/2023/en/0x11-t10/" target="_blank" rel="noopener">OWASP API Security Top 10</a></li>
+          <li class="list-group-item"><a href="https://cwe.mitre.org/" target="_blank" rel="noopener">CWE — weakness catalog</a></li>
+          <li class="list-group-item"><a href="https://cheatsheetseries.owasp.org/" target="_blank" rel="noopener">OWASP Cheat Sheet Series</a></li>
+        </ul></div></div>
+        <div class="col"><div class="card h-100"><div class="card-header">Test applications</div><ul class="list-group list-group-flush small">
+          <li class="list-group-item"><a href="https://github.com/juice-shop/juice-shop" target="_blank" rel="noopener">OWASP Juice Shop</a></li>
+          <li class="list-group-item"><a href="https://github.com/digininja/DVWA" target="_blank" rel="noopener">DVWA</a> · <a href="https://owasp.org/www-project-webgoat/" target="_blank" rel="noopener">WebGoat</a></li>
+          <li class="list-group-item"><a href="https://github.com/erev0s/VAmPI" target="_blank" rel="noopener">VAmPI (API)</a> · <a href="https://github.com/dolevf/Damn-Vulnerable-GraphQL-Application" target="_blank" rel="noopener">DVGA (GraphQL)</a></li>
+          <li class="list-group-item"><a href="/deploy-test-apps">Deploy Test Apps →</a></li>
+        </ul></div></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+  document.querySelectorAll('#helpToc a').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault(); document.querySelector(a.getAttribute('href')).scrollIntoView({behavior: 'smooth'});
+  }));
+</script>{% endblock %}

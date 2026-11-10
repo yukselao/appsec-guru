@@ -49,6 +49,7 @@
       <h1 class="wt-title">{% if pages[page].group is defined %}<span class="text-body-secondary fw-normal">{{ pages[page].group }} / </span>{% endif %}{{ title }}</h1>
       <div class="ms-auto d-flex align-items-center gap-2">
         <span class="badge rounded-pill text-bg-light border wt-conn" id="wtConn" title="Connection status">…</span>
+        <a class="btn btn-sm btn-outline-secondary" href="/help" title="Help & references">{{ ic.icon('help') }}</a>
         <button class="btn btn-sm btn-outline-secondary" id="wtTheme" type="button" title="Toggle theme">{{ ic.icon('moon') }}</button>
         <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#wtChat" aria-controls="wtChat">{{ ic.icon('chat') }}<span class="d-none d-sm-inline ms-1">AI assistant</span></button>
       </div>

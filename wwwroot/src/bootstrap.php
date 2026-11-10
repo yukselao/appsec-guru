@@ -18,6 +18,7 @@ const PAGES = [
     'devops'           => ['title' => 'DevOps', 'group' => 'DevOps', 'icon' => 'cli', 'template' => 'pages/devops.html.twig'],
     'sensors'          => ['title' => 'Sensors', 'icon' => 'broadcast', 'template' => 'pages/sensors.html.twig', 'foot' => true],
     'settings'         => ['title' => 'Settings', 'icon' => 'gear', 'template' => 'pages/settings.html.twig', 'foot' => true],
+    'help'             => ['title' => 'Help & References', 'icon' => 'help', 'template' => 'pages/help.html.twig', 'hidden' => true],
 ];
 
 function asset_version(string $rel): string
