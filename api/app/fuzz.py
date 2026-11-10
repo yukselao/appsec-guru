@@ -65,7 +65,9 @@ def wordlists():
     out = []
     for f in sorted(os.listdir(WORDLIST_DIR)):
         p = os.path.join(WORDLIST_DIR, f)
-        if os.path.isfile(p):
+        if f.startswith(".") or not os.path.isfile(p):
+            continue
+        if True:
             out.append({"name": f, "words": _count(p), "size": os.path.getsize(p),
                         "builtin": f in BUILTIN})
     return out
@@ -92,6 +94,18 @@ def save_wordlist(name, content):
     with open(os.path.join(WORDLIST_DIR, name), "w") as fh:
         fh.write("\n".join(lines) + "\n")
     return {"name": name, "words": len(lines)}
+
+
+def read_wordlist(name, limit=5000):
+    path = wordlist_path(name)
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        words = [ln.rstrip("\n") for ln in fh]
+    return {"name": name, "words": len(words), "truncated": len(words) > limit, "sample": words[:limit]}
+
+
+def wordlist_bytes(name):
+    with open(wordlist_path(name), "rb") as fh:
+        return fh.read()
 
 
 def delete_wordlist(name):

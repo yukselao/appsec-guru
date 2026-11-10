@@ -66,5 +66,11 @@
   </div>
   <div class="modal-footer"><button class="btn btn-primary" id="wlSave">Save wordlist</button></div>
 </div></div></div>
+
+<div class="modal fade" id="wlViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="wlViewTitle">Wordlist</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><pre class="code mb-0" id="wlViewBody" style="max-height:60vh;overflow:auto"></pre></div>
+  <div class="modal-footer"><a class="btn btn-outline-primary" id="wlViewDownload" href="#">Download</a><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
 {% endblock %}
 {% block scripts %}<script src="{{ asset('pages/fuzz.js') }}"></script>{% endblock %}

@@ -7,8 +7,13 @@
     WT.get('/fuzz/wordlists').then(r => {
       $('#fzWordlist').html(r.wordlists.map(w => `<option value="${WT.esc(w.name)}">${WT.esc(w.name)} (${w.words} words${w.builtin ? ', built-in' : ''})</option>`).join(''));
       $('#fzWl').html(r.wordlists.map(w => `<li class="list-group-item d-flex align-items-center gap-2">
-        <span class="text-truncate">${WT.esc(w.name)}</span><span class="badge text-bg-secondary">${w.words}</span>
-        ${w.builtin ? '<span class="badge text-bg-light border">built-in</span>' : `<button class="btn btn-sm btn-link text-danger ms-auto p-0" data-del-wl="${WT.esc(w.name)}">delete</button>`}</li>`).join(''));
+        <span class="text-truncate" title="${WT.esc(w.name)}">${WT.esc(w.name)}</span><span class="badge text-bg-secondary">${w.words}</span>
+        ${w.builtin ? '<span class="badge text-bg-light border">built-in</span>' : ''}
+        <span class="ms-auto d-flex gap-2">
+          <a href="#" data-view-wl="${WT.esc(w.name)}" title="View">view</a>
+          <a href="/api/fuzz/wordlists/${encodeURIComponent(w.name)}/download" title="Download">download</a>
+          ${w.builtin ? '' : `<a href="#" class="text-danger" data-del-wl="${WT.esc(w.name)}" title="Delete">delete</a>`}
+        </span></li>`).join(''));
     }).catch(e => WT.fail(e));
   }
 
@@ -84,6 +89,15 @@
   $(document).on('click', '[data-del-wl]', function () {
     const n = $(this).data('del-wl'); if (!confirm('Delete wordlist ' + n + '?')) return;
     WT.api('DELETE', '/fuzz/wordlists/' + encodeURIComponent(n)).then(() => { WT.ok('Deleted'); wordlists(); }).catch(e => WT.fail(e));
+  });
+  $(document).on('click', '[data-view-wl]', function (e) {
+    e.preventDefault(); const n = $(this).data('view-wl');
+    WT.get('/fuzz/wordlists/' + encodeURIComponent(n)).then(d => {
+      $('#wlViewTitle').text(`${d.name} — ${d.words} words${d.truncated ? ' (first ' + d.sample.length + ' shown)' : ''}`);
+      $('#wlViewBody').text(d.sample.join('\n'));
+      $('#wlViewDownload').attr('href', '/api/fuzz/wordlists/' + encodeURIComponent(n) + '/download');
+      bootstrap.Modal.getOrCreateInstance('#wlViewModal').show();
+    }).catch(e => WT.fail(e));
   });
   $('#fzUpload').on('click', () => bootstrap.Modal.getOrCreateInstance('#wlModal').show());
   $('#wlFile').on('change', function () {

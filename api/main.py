@@ -871,6 +871,24 @@ def fuzz_wordlist_add(req: Request, body: dict = Body(...)):
     return out
 
 
+@router.get("/fuzz/wordlists/{name}")
+def fuzz_wordlist_get(name: str):
+    try:
+        return fuzz.read_wordlist(name)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.get("/fuzz/wordlists/{name}/download")
+def fuzz_wordlist_download(name: str):
+    try:
+        data = fuzz.wordlist_bytes(name)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+    return Response(content=data, media_type="text/plain",
+                    headers={"Content-Disposition": 'attachment; filename="{}"'.format(name)})
+
+
 @router.delete("/fuzz/wordlists/{name}")
 def fuzz_wordlist_del(name: str, req: Request):
     try:
