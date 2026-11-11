@@ -19,19 +19,19 @@
       <h2 class="h5 mb-0" id="folderTitle">All scans</h2>
       <span class="badge text-bg-secondary" id="profCount">0</span>
       <div class="ms-auto d-flex gap-2 align-items-center">
-        <input class="form-control form-control-sm" style="max-width:220px" id="profSearch" placeholder="Search profiles">
+        <input class="form-control form-control-sm" style="max-width:220px" id="profSearch" placeholder="Search scans">
         <button class="btn btn-sm btn-outline-secondary" id="refreshProf" title="Refresh">Refresh</button>
-        <button class="btn btn-sm btn-primary text-nowrap" id="newProfile">New scan</button>
+        <button class="btn btn-sm btn-primary text-nowrap" id="newProfile">Create Tenable WAS Scan</button>
       </div>
     </div>
     <div id="profErr"></div>
-    <div class="auto-grid" id="profCards"></div>
+    <div id="profCards"></div>
   </div>
 </div>
 
 {# ---------------- profile wizard modal ---------------- #}
 <div class="modal fade" id="profModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
-  <div class="modal-header"><h5 class="modal-title" id="pmTitle">New Scan</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-header"><h5 class="modal-title" id="pmTitle">Create Tenable WAS Scan</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
   <div class="modal-body">
     <ol class="wizard-steps" id="pmSteps">
       <li class="active" data-step="1">General</li><li data-step="2">Settings</li>
@@ -64,9 +64,10 @@
     <section class="wizard-pane" data-pane="2">
       <h6 class="text-body-secondary text-uppercase small fw-semibold mb-2">Basic</h6>
       <div class="row g-3">
-        <div class="col-md-6"><label class="form-label" for="pmZone">Scan zone <span class="text-danger">*</span></label><select class="form-select" id="pmZone"></select>
-          <div class="form-text">The zone's scanner runs the scan; AppSec Guru captures its log automatically.</div></div>
-        <div class="col-md-6"><label class="form-label" for="pmRepo">Import repository</label><select class="form-select" id="pmRepo"></select></div>
+        <div class="col-md-4"><label class="form-label" for="pmZone">Scan zone <span class="text-danger">*</span></label><select class="form-select" id="pmZone"></select></div>
+        <div class="col-md-4"><label class="form-label" for="pmRepo">Import repository</label><select class="form-select" id="pmRepo"></select></div>
+        <div class="col-md-4"><label class="form-label" for="pmSensor">Sensor</label><select class="form-select" id="pmSensor"></select>
+          <div class="form-text">The scanner host AppSec Guru connects to over SSH for live debug logs.</div></div>
       </div>
       <h6 class="text-body-secondary text-uppercase small fw-semibold mt-4 mb-2">Advanced</h6>
       <div class="row g-3">

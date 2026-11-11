@@ -203,3 +203,11 @@ body { background: var(--ag-bg); }
 
 #profCards.auto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 1rem; }
 #profCards.auto-grid > .col { width: auto; }
+
+/* ---------- scans table ---------- */
+.wt-scan-table td, .wt-scan-table th { vertical-align: middle; }
+.scan-row td:first-child { box-shadow: inset 3px 0 0 transparent; }
+.scan-row.is-on td:first-child { box-shadow: inset 3px 0 0 var(--ag-teal); }
+.scan-row.is-running td:first-child { box-shadow: inset 3px 0 0 var(--bs-primary, #2f6fed); }
+.scan-row.is-off td:first-child { box-shadow: inset 3px 0 0 var(--ag-gray); }
+.scan-row.is-off { opacity: .7; }

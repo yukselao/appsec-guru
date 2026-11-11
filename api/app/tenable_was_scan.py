@@ -14,14 +14,14 @@ import time
 from sqlalchemy import select
 
 from wtdb.database import session_scope
-from wtdb.models import ScanFolder, ScanProfile, ScanRun
+from wtdb.models import ScanFolder, TenableWasScan, ScanRun
 
 from . import runs
 from . import settings as st
 
 log = logging.getLogger("scheduler")
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-PROFILE_FIELDS = ("name", "description", "folder_id", "sensor_id", "target_url", "source_policy_id", "families", "debug_mode",
+SCAN_FIELDS = ("name", "description", "folder_id", "sensor_id", "target_url", "source_policy_id", "families", "debug_mode",
                   "scope", "prefs", "keep_objects", "repo_id", "zone_id", "credential_ids", "report_ids",
                   "max_scan_time", "inactivity_hours", "remove_unresponsive", "schedule", "enabled")
 
@@ -120,7 +120,7 @@ def run_params(p):
 
 def run_now(profile_id, trigger="manual", client_ip=None):
     with session_scope() as s:
-        p = s.get(ScanProfile, profile_id)
+        p = s.get(TenableWasScan, profile_id)
         if not p:
             raise ValueError("profile not found")
         if p.last_run_id and runs.is_active(p.last_run_id):
@@ -128,7 +128,7 @@ def run_now(profile_id, trigger="manual", client_ip=None):
         params = run_params(p)
     run_id = runs.start(params, client_ip=client_ip, profile_id=profile_id, trigger=trigger)
     with session_scope() as s:
-        p = s.get(ScanProfile, profile_id)
+        p = s.get(TenableWasScan, profile_id)
         p.last_run_id = run_id
         p.last_run_at = local_now()
         if trigger == "schedule":
@@ -146,9 +146,9 @@ _started = False
 def _tick():
     now = local_now()
     with session_scope() as s:
-        due = [p.id for p in s.execute(select(ScanProfile).where(
-            ScanProfile.enabled.is_(True), ScanProfile.next_run_at.isnot(None),
-            ScanProfile.next_run_at <= now)).scalars()]
+        due = [p.id for p in s.execute(select(TenableWasScan).where(
+            TenableWasScan.enabled.is_(True), TenableWasScan.next_run_at.isnot(None),
+            TenableWasScan.next_run_at <= now)).scalars()]
     for pid in due:
         try:
             rid = run_now(pid, trigger="schedule")
@@ -156,7 +156,7 @@ def _tick():
         except ValueError as exc:
             log.warning("profile %s skipped: %s", pid, exc)
             with session_scope() as s:
-                p = s.get(ScanProfile, pid)
+                p = s.get(TenableWasScan, pid)
                 p.next_run_at = next_run(p.schedule)  # skip this slot, try the next one
         except Exception:
             log.exception("profile %s failed to start", pid)
@@ -184,7 +184,7 @@ def folder_tree():
         folders = [{"id": f.id, "name": f.name, "parent_id": f.parent_id}
                    for f in s.execute(select(ScanFolder).order_by(ScanFolder.name)).scalars()]
         counts = {}
-        for p in s.execute(select(ScanProfile.folder_id)).all():
+        for p in s.execute(select(TenableWasScan.folder_id)).all():
             counts[p[0]] = counts.get(p[0], 0) + 1
     for f in folders:
         f["profiles"] = counts.get(f["id"], 0)

@@ -13,14 +13,14 @@ from fastapi import APIRouter, Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
-from app import ai, conn, fuzz, portscan, profiles, recon, runs, sensors
+from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, ScanFolder, ScanProfile, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -49,7 +49,7 @@ try:
     portscan.mark_orphans()
     runs.resume_orphans()
     sast.mark_orphans()
-    profiles.start_scheduler()
+    was_scan.start_scheduler()
 except Exception:  # database not reachable yet: the next start retries
     log.exception("orphan runs")
 
@@ -294,7 +294,7 @@ def scan_start(req: Request, params: dict = Body(...)):
 # ------------------------------------------------------- folders / profiles
 @router.get("/folders")
 def folders_list():
-    return profiles.folder_tree()
+    return was_scan.folder_tree()
 
 
 @router.post("/folders")
@@ -344,7 +344,7 @@ def folder_delete(fid: int, req: Request):
 
 
 def _profile_data(body):
-    d = {k: body[k] for k in profiles.PROFILE_FIELDS if k in body}
+    d = {k: body[k] for k in was_scan.SCAN_FIELDS if k in body}
     d["name"] = str(d.get("name") or "").strip()[:200]
     d["target_url"] = str(d.get("target_url") or "").strip()
     for k in ("repo_id", "zone_id", "folder_id", "sensor_id"):
@@ -362,26 +362,26 @@ def _profile_data(body):
     return d
 
 
-@router.get("/profiles")
+@router.get("/tenable-was-scans")
 def profiles_list(folder: str = "all"):
     with session_scope() as s:
-        q = select(ScanProfile).order_by(ScanProfile.name)
+        q = select(TenableWasScan).order_by(TenableWasScan.name)
         if folder == "unfiled":
-            q = q.where(ScanProfile.folder_id.is_(None))
+            q = q.where(TenableWasScan.folder_id.is_(None))
         elif folder not in ("all", ""):
-            q = q.where(ScanProfile.folder_id == int(folder))
+            q = q.where(TenableWasScan.folder_id == int(folder))
         rows = list(s.execute(q).scalars())
-        last = profiles.last_runs([p.last_run_id for p in rows if p.last_run_id])
-        return {"profiles": [profiles.row(p, last.get(p.last_run_id)) for p in rows]}
+        last = was_scan.last_runs([p.last_run_id for p in rows if p.last_run_id])
+        return {"scans": [was_scan.row(p, last.get(p.last_run_id)) for p in rows]}
 
 
-@router.get("/profiles/{pid}")
+@router.get("/tenable-was-scans/{pid}")
 def profile_get(pid: int):
     with session_scope() as s:
-        p = s.get(ScanProfile, pid)
+        p = s.get(TenableWasScan, pid)
         if not p:
             raise HTTPException(404, "profile not found")
-        out = profiles.row(p, profiles.last_runs([p.last_run_id]).get(p.last_run_id) if p.last_run_id else None)
+        out = was_scan.row(p, was_scan.last_runs([p.last_run_id]).get(p.last_run_id) if p.last_run_id else None)
         out["runs"] = [_run_row(r) for r in s.execute(select(ScanRun).where(ScanRun.profile_id == pid)
                                                        .order_by(desc(ScanRun.id)).limit(20)).scalars()]
     return out
@@ -390,16 +390,16 @@ def profile_get(pid: int):
 def _save_profile(pid, body, client_ip):
     d = _profile_data(body)
     try:
-        profiles.validate(d)
+        was_scan.validate(d)
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     with session_scope() as s:
-        p = s.get(ScanProfile, pid) if pid else ScanProfile()
+        p = s.get(TenableWasScan, pid) if pid else TenableWasScan()
         if pid and not p:
             raise HTTPException(404, "profile not found")
         for k, v in d.items():
             setattr(p, k, v)
-        p.next_run_at = profiles.next_run(d.get("schedule")) if d.get("enabled", True) else None
+        p.next_run_at = was_scan.next_run(d.get("schedule")) if d.get("enabled", True) else None
         if not pid:
             s.add(p)
         s.flush()
@@ -408,50 +408,50 @@ def _save_profile(pid, body, client_ip):
     run_id = None
     if body.get("run_now"):
         try:
-            run_id = profiles.run_now(pid, trigger="manual", client_ip=client_ip)
+            run_id = was_scan.run_now(pid, trigger="manual", client_ip=client_ip)
         except ValueError as exc:
             raise HTTPException(409, str(exc))
     return {"id": pid, "run_id": run_id}
 
 
-@router.post("/profiles")
+@router.post("/tenable-was-scans")
 def profile_create(req: Request, body: dict = Body(...)):
     return _save_profile(None, body, ip(req))
 
 
-@router.put("/profiles/{pid}")
+@router.put("/tenable-was-scans/{pid}")
 def profile_update(pid: int, req: Request, body: dict = Body(...)):
     return _save_profile(pid, body, ip(req))
 
 
-@router.post("/profiles/{pid}/run")
+@router.post("/tenable-was-scans/{pid}/run")
 def profile_run(pid: int, req: Request):
     try:
-        return {"run_id": profiles.run_now(pid, trigger="manual", client_ip=ip(req))}
+        return {"run_id": was_scan.run_now(pid, trigger="manual", client_ip=ip(req))}
     except ValueError as exc:
         raise HTTPException(409, str(exc))
 
 
-@router.post("/profiles/{pid}/toggle")
+@router.post("/tenable-was-scans/{pid}/toggle")
 def profile_toggle(pid: int, req: Request):
     with session_scope() as s:
-        p = s.get(ScanProfile, pid)
+        p = s.get(TenableWasScan, pid)
         if not p:
             raise HTTPException(404, "profile not found")
         p.enabled = not p.enabled
-        p.next_run_at = profiles.next_run(p.schedule) if p.enabled else None
+        p.next_run_at = was_scan.next_run(p.schedule) if p.enabled else None
         state = p.enabled
     st.audit("scan_profile_toggle", client_ip=ip(req), profile_id=pid, enabled=state)
     return {"enabled": state}
 
 
-@router.post("/profiles/{pid}/copy")
+@router.post("/tenable-was-scans/{pid}/copy")
 def profile_copy(pid: int, req: Request):
     with session_scope() as s:
-        p = s.get(ScanProfile, pid)
+        p = s.get(TenableWasScan, pid)
         if not p:
             raise HTTPException(404, "profile not found")
-        c = ScanProfile(**{k: getattr(p, k) for k in profiles.PROFILE_FIELDS})
+        c = TenableWasScan(**{k: getattr(p, k) for k in was_scan.SCAN_FIELDS})
         c.name = (p.name + " (copy)")[:200]
         c.enabled = False
         s.add(c)
@@ -461,10 +461,10 @@ def profile_copy(pid: int, req: Request):
     return {"id": cid}
 
 
-@router.delete("/profiles/{pid}")
+@router.delete("/tenable-was-scans/{pid}")
 def profile_delete(pid: int, req: Request):
     with session_scope() as s:
-        s.execute(delete(ScanProfile).where(ScanProfile.id == pid))
+        s.execute(delete(TenableWasScan).where(TenableWasScan.id == pid))
     st.audit("scan_profile_delete", client_ip=ip(req), profile_id=pid)
     return {"deleted": pid}
 

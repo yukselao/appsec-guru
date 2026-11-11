@@ -19,16 +19,16 @@
 
   // ------------------------------------------------------------ folder tree
   function tree() {
-    $.when(WT.get('/folders'), WT.get('/profiles?folder=all')).then((fr, pr) => {
+    $.when(WT.get('/folders'), WT.get('/tenable-was-scans?folder=all')).then((fr, pr) => {
       S.folders = fr[0].folders;
-      const counts = {}; pr[0].profiles.forEach(p => { counts[p.folder_id] = (counts[p.folder_id] || 0) + 1; });
+      const counts = {}; pr[0].scans.forEach(p => { counts[p.folder_id] = (counts[p.folder_id] || 0) + 1; });
       const kids = pid => S.folders.filter(f => f.parent_id === pid);
       const node = f => `<div class="folder-node ${S.folder == f.id ? 'active' : ''}" data-folder="${f.id}">
         <span class="fl-name">${ICO.folder} ${WT.esc(f.name)}</span><span class="badge rounded-pill text-bg-light border ms-1">${counts[f.id] || 0}</span>
         <span class="fl-actions"><a href="#" data-ren="${f.id}" title="Rename">✎</a> <a href="#" data-delf="${f.id}" title="Delete">✕</a></span>
         <div class="fl-children">${kids(f.id).map(node).join('')}</div></div>`;
       $('#folderTree').html(
-        `<div class="folder-node ${S.folder === 'all' ? 'active' : ''}" data-folder="all"><span class="fl-name">${ICO.all} All profiles</span><span class="badge rounded-pill text-bg-light border ms-1">${pr[0].profiles.length}</span></div>` +
+        `<div class="folder-node ${S.folder === 'all' ? 'active' : ''}" data-folder="all"><span class="fl-name">${ICO.all} All scans</span><span class="badge rounded-pill text-bg-light border ms-1">${pr[0].scans.length}</span></div>` +
         kids(null).map(node).join('') +
         `<div class="folder-node ${S.folder === 'unfiled' ? 'active' : ''}" data-folder="unfiled"><span class="fl-name">${ICO.inbox} Unfiled</span><span class="badge rounded-pill text-bg-light border ms-1">${fr[0].unfiled}</span></div>`);
       profiles();
@@ -36,57 +36,51 @@
   }
 
   function profiles() {
-    WT.get('/profiles?folder=' + S.folder).then(r => {
-      $('#profCount').text(r.profiles.length);
+    WT.get('/tenable-was-scans?folder=' + S.folder).then(r => {
+      $('#profCount').text(r.scans.length);
       const folderName = S.folder === 'all' ? 'All scans' : S.folder === 'unfiled' ? 'Unfiled scans'
-        : (S.folders.find(f => f.id == S.folder) || {}).name || 'Profiles';
+        : (S.folders.find(f => f.id == S.folder) || {}).name || 'Scans';
       $('#folderTitle').text(folderName);
       const q = ($('#profSearch').val() || '').toLowerCase();
-      const list = r.profiles.filter(p => !q || (p.name + ' ' + p.target_url).toLowerCase().includes(q));
-      $('#profCards').html(list.length ? list.map(card).join('')
-        : `<div class="col-12"><div class="profile-empty text-center py-5">
+      const list = r.scans.filter(p => !q || (p.name + ' ' + p.target_url).toLowerCase().includes(q));
+      if (!list.length) {
+        $('#profCards').html(`<div class="profile-empty text-center py-5">
             <div class="mb-2 text-body-secondary">${ICO.layers}</div>
             <div class="fw-semibold">No scans here</div>
             <div class="small text-body-secondary mb-3">Create a reusable scan: a target, policy, families and a schedule.</div>
-            <button class="btn btn-primary btn-sm" id="emptyNew">New scan</button></div></div>`);
+            <button class="btn btn-primary btn-sm" id="emptyNew">Create Tenable WAS Scan</button></div>`);
+        return;
+      }
+      $('#profCards').html(`<div class="card"><div class="table-responsive"><table class="table align-middle wt-scan-table mb-0">
+        <thead><tr><th>Name</th><th>Target</th><th>Policy</th><th>Debug</th><th>Schedule</th><th>Last run</th><th>Next run</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>${list.map(rowHtml).join('')}</tbody></table></div></div>`);
     }).catch(e => $('#profErr').html(`<div class="alert alert-danger">${WT.esc(e)}</div>`));
   }
 
-  function card(p) {
+  function rowHtml(p) {
     const last = p.last_run;
-    const sensor = (S.sensors.find(s => s.id === p.sensor_id) || {}).name || 'default sensor';
     const onDemand = (p.schedule || {}).type === 'on_demand' || !p.schedule;
-    const schedCls = !p.enabled ? 'text-bg-light border' : onDemand ? 'text-bg-light border' : 'sched-on';
+    const schedCls = !p.enabled || onDemand ? 'text-bg-light border' : 'sched-on';
     const accent = !p.enabled ? 'is-off' : (last && last.active ? 'is-running' : 'is-on');
-    const meta = (icon, label, val) => `<div class="pm-item">${icon}<div><div class="pm-k">${label}</div><div class="pm-v">${val}</div></div></div>`;
-    return `<div class="col"><div class="card profile-card h-100 ${accent}">
-      <div class="card-body">
-        <div class="d-flex align-items-start gap-2 mb-2">
-          <div class="min-w-0">
-            <div class="d-flex align-items-center gap-2"><h3 class="h6 mb-0 text-truncate">${WT.esc(p.name)}</h3>
-              ${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>
-            ${p.description ? `<div class="small text-body-secondary text-truncate">${WT.esc(p.description)}</div>` : ''}
-          </div>
-          <span class="badge rounded-pill ${schedCls} ms-auto text-nowrap">${ICO.clock} ${WT.esc(p.schedule_text)}</span>
-        </div>
-        <a class="profile-target d-flex align-items-center gap-1 text-truncate" href="/create-scan?target=${encodeURIComponent(p.target_url)}" title="${WT.esc(p.target_url)}">${ICO.globe}<span class="mono text-truncate">${WT.esc(p.target_url)}</span></a>
-        <div class="pm-grid mt-3">
-          ${meta(ICO.shield, 'Policy', WT.esc(p.source_policy_id) + ' · ' + (p.families.length ? p.families.length + ' families' : 'policy families'))}
-          ${meta(ICO.sensor, 'Sensor', WT.esc(sensor))}
-          ${meta(ICO.bug, 'Debug', WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode))}
-          ${meta(ICO.clock, p.next_run_at ? 'Next run' : 'Last run',
-            p.next_run_at ? WT.dt(p.next_run_at)
-              : (last ? `<a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}` : '—'))}
-        </div>
-        ${last ? `<div class="small text-body-secondary mt-2">Last run <a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''}${last.findings ? ' · ' + last.findings + ' findings' : ''}</div>` : ''}
-      </div>
-      <div class="card-footer d-flex flex-wrap align-items-center gap-2">
-        <button class="btn btn-sm btn-primary" data-run="${p.id}">${ICO.play} Run now</button>
-        <button class="btn btn-sm btn-outline-secondary" data-edit="${p.id}">Edit</button>
-        <button class="btn btn-sm btn-outline-secondary" data-toggle="${p.id}">${p.enabled ? 'Disable' : 'Enable'}</button>
-        <button class="btn btn-sm btn-outline-secondary" data-copy="${p.id}">Copy</button>
-        <button class="btn btn-sm btn-outline-danger ms-auto" data-delp="${p.id}">Delete</button>
-      </div></div></div>`;
+    const lastCell = last
+      ? `<a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''}${last.findings ? ` · ${last.findings} findings` : ''}`
+      : '<span class="text-body-secondary">—</span>';
+    return `<tr class="scan-row ${accent}">
+      <td><div class="d-flex align-items-center gap-2"><span class="fw-semibold text-truncate" style="max-width:220px" title="${WT.esc(p.name)}">${WT.esc(p.name)}</span>${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>${p.description ? `<div class="small text-body-secondary text-truncate" style="max-width:260px">${WT.esc(p.description)}</div>` : ''}</td>
+      <td><a class="mono small text-truncate d-inline-block" style="max-width:240px" href="/create-scan?target=${encodeURIComponent(p.target_url)}" title="${WT.esc(p.target_url)}">${WT.esc(p.target_url)}</a></td>
+      <td class="small">${WT.esc(p.source_policy_id)} <span class="text-body-secondary">· ${p.families.length ? p.families.length + ' families' : 'policy families'}</span></td>
+      <td class="small">${WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode)}</td>
+      <td><span class="badge rounded-pill ${schedCls} text-nowrap">${ICO.clock} ${WT.esc(p.schedule_text)}</span></td>
+      <td class="small">${lastCell}</td>
+      <td class="small text-nowrap">${p.next_run_at ? WT.dt(p.next_run_at) : '<span class="text-body-secondary">—</span>'}</td>
+      <td class="text-end text-nowrap">
+        <div class="btn-group btn-group-sm" role="group">
+          <button class="btn btn-primary" data-run="${p.id}" title="Run now">${ICO.play}</button>
+          <button class="btn btn-outline-secondary" data-edit="${p.id}">Edit</button>
+          <button class="btn btn-outline-secondary" data-toggle="${p.id}">${p.enabled ? 'Disable' : 'Enable'}</button>
+          <button class="btn btn-outline-secondary" data-copy="${p.id}">Copy</button>
+          <button class="btn btn-outline-danger" data-delp="${p.id}">Delete</button>
+        </div></td></tr>`;
   }
 
   function miniRunning() {
@@ -167,8 +161,9 @@
 
   function openWizard(p) {
     S.editing = p ? p.id : null; S.step = 1;
-    $('#pmTitle').text(p ? 'Edit Scan' : 'New Scan');
+    $('#pmTitle').text(p ? 'Edit Tenable WAS Scan' : 'Create Tenable WAS Scan');
     $('#pmFolder').html('<option value="">Unfiled</option>' + S.folders.map(f => `<option value="${f.id}">${WT.esc(f.name)}</option>`).join(''));
+    $('#pmSensor').html(S.sensors.map(s => `<option value="${s.id}">${WT.esc(s.name)}${s.is_default ? ' (default)' : ''}</option>`).join(''));
     $('#pmPolicy').html(S.policies.map(x => `<option value="${WT.esc(x.id)}">${WT.esc(x.id)} · ${WT.esc(x.name)}</option>`).join(''));
     $('#pmFamilies').html(S.families.map(f => `<div class="col"><div class="form-check"><input class="form-check-input pmFam" type="checkbox" value="${WT.esc(f.name)}" id="pf${f.id}"><label class="form-check-label" for="pf${f.id}">${WT.esc(f.name)}</label></div></div>`).join(''));
     $('#pmRepo').html('<option value="">' + ((S.repos || []).length ? '— auto —' : 'no repositories') + '</option>' +
@@ -178,6 +173,7 @@
     const d = p || {};
     $('#pmName').val(d.name || ''); $('#pmDesc').val(d.description || ''); $('#pmUrl').val(d.target_url || '');
     $('#pmFolder').val(d.folder_id || (S.folder !== 'all' && S.folder !== 'unfiled' ? S.folder : ''));
+    $('#pmSensor').val(d.sensor_id || (S.sensors.find(s => s.is_default) || {}).id || '');
     $('#pmPolicy').val(d.source_policy_id || (S.policies[0] || {}).id);
     $('#pmDebug').val(d.debug_mode || 'both'); $('#pmScope').val(d.scope || 'fast');
     $('#pmKeep').prop('checked', d.keep_objects !== false); $('#pmRepo').val(d.repo_id || ''); $('#pmZone').val(d.zone_id || '');
@@ -210,7 +206,7 @@
   }
   function profBody() {
     return {name: $('#pmName').val().trim(), description: $('#pmDesc').val().trim(), folder_id: $('#pmFolder').val() || null,
-      target_url: $('#pmUrl').val().trim(), sensor_id: null, source_policy_id: $('#pmPolicy').val(),
+      target_url: $('#pmUrl').val().trim(), sensor_id: $('#pmSensor').val() || null, source_policy_id: $('#pmPolicy').val(),
       families: $('.pmFam:checked').map((i, el) => el.value).get(), debug_mode: $('#pmDebug').val(), scope: $('#pmScope').val(),
       keep_objects: $('#pmKeep').prop('checked'), repo_id: $('#pmRepo').val() || null, zone_id: $('#pmZone').val() || null,
       credential_ids: collectCreds(), report_ids: collectReports(),
@@ -227,14 +223,14 @@
   $(document).on('click', '[data-delf]', function (e) { e.preventDefault(); e.stopPropagation(); const id = $(this).data('delf'); if (confirm('Delete folder? Profiles inside move to Unfiled.')) WT.api('DELETE', '/folders/' + id).then(() => { S.folder = 'all'; tree(); }).catch(x => WT.fail(x)); });
   $('#newProfile, #profCards').on('click', '#newProfile, #emptyNew', e => { e.preventDefault(); openWizard(null); });
   $('#newProfile').on('click', () => openWizard(null));
-  $(document).on('click', '[data-edit]', function () { WT.get('/profiles/' + $(this).data('edit')).then(openWizard).catch(e => WT.fail(e)); });
+  $(document).on('click', '[data-edit]', function () { WT.get('/tenable-was-scans/' + $(this).data('edit')).then(openWizard).catch(e => WT.fail(e)); });
   $(document).on('click', '[data-run]', function () {
     const id = $(this).data('run');
-    WT.post('/profiles/' + id + '/run').then(r => { WT.ok('Run #' + r.run_id + ' started'); location.href = '/scan-results/' + r.run_id; }).catch(e => WT.fail(e));
+    WT.post('/tenable-was-scans/' + id + '/run').then(r => { WT.ok('Run #' + r.run_id + ' started'); location.href = '/scan-results/' + r.run_id; }).catch(e => WT.fail(e));
   });
-  $(document).on('click', '[data-toggle]', function () { WT.post('/profiles/' + $(this).data('toggle') + '/toggle').then(r => { WT.ok(r.enabled ? 'Enabled' : 'Disabled'); profiles(); }).catch(e => WT.fail(e)); });
-  $(document).on('click', '[data-copy]', function () { WT.post('/profiles/' + $(this).data('copy') + '/copy').then(() => { WT.ok('Copied'); tree(); }).catch(e => WT.fail(e)); });
-  $(document).on('click', '[data-delp]', function () { const id = $(this).data('delp'); if (confirm('Delete profile #' + id + '?')) WT.api('DELETE', '/profiles/' + id).then(() => { WT.ok('Deleted'); tree(); }).catch(e => WT.fail(e)); });
+  $(document).on('click', '[data-toggle]', function () { WT.post('/tenable-was-scans/' + $(this).data('toggle') + '/toggle').then(r => { WT.ok(r.enabled ? 'Enabled' : 'Disabled'); profiles(); }).catch(e => WT.fail(e)); });
+  $(document).on('click', '[data-copy]', function () { WT.post('/tenable-was-scans/' + $(this).data('copy') + '/copy').then(() => { WT.ok('Copied'); tree(); }).catch(e => WT.fail(e)); });
+  $(document).on('click', '[data-delp]', function () { const id = $(this).data('delp'); if (confirm('Delete profile #' + id + '?')) WT.api('DELETE', '/tenable-was-scans/' + id).then(() => { WT.ok('Deleted'); tree(); }).catch(e => WT.fail(e)); });
   $('#pmNext').on('click', () => goStep(S.step + 1));
   $('#pmBack').on('click', () => goStep(S.step - 1));
   $('#pmSteps').on('click', 'li', function () { goStep($(this).data('step')); });
@@ -249,7 +245,7 @@
   $('#pmSave').on('click', function () {
     const b = profBody();
     if (!b.name || !b.target_url) { WT.warn('Name and target URL are required'); goStep(1); return; }
-    const req = S.editing ? WT.api('PUT', '/profiles/' + S.editing, b) : WT.post('/profiles', b);
+    const req = S.editing ? WT.api('PUT', '/tenable-was-scans/' + S.editing, b) : WT.post('/tenable-was-scans', b);
     req.then(r => { WT.ok('Scan saved'); bootstrap.Modal.getInstance('#profModal').hide();
       if (r.run_id) { location.href = '/scan-results/' + r.run_id; return; } tree(); }).catch(e => WT.fail(e));
   });

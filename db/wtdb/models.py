@@ -21,7 +21,7 @@ class ScanRun(Base):
     """A WAS scan started from this tool (manually or by a scan profile schedule)."""
     __tablename__ = "scan_runs"
     id = Column(Integer, primary_key=True)
-    profile_id = Column(Integer, ForeignKey("scan_profiles.id", ondelete="SET NULL"), index=True)
+    profile_id = Column(Integer, ForeignKey("tenable_was_scans.id", ondelete="SET NULL"), index=True)
     sensor_id = Column(Integer, ForeignKey("sensors.id", ondelete="SET NULL"), index=True)
     trigger = Column(String(20), nullable=False, server_default="manual")
     name = Column(String(200), nullable=False)
@@ -167,9 +167,9 @@ class ScanFolder(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
-class ScanProfile(Base):
+class TenableWasScan(Base):
     """A saved DAST scan definition: target, policy, families, options, schedule."""
-    __tablename__ = "scan_profiles"
+    __tablename__ = "tenable_was_scans"
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
     description = Column(Text)
