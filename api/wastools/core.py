@@ -317,6 +317,12 @@ class SC(object):
     def repositories(self):
         return self.as_list(self.get("repository", fields="id,name,type,dataFormat"))
 
+    def credentials(self):
+        return self.as_list(self.get("credential", filter="usable", fields="id,name,type,authType"))
+
+    def report_definitions(self):
+        return self.as_list(self.get("reportDefinition", fields="id,name,type"))
+
     def was_scanners(self):
         try:
             return self.as_list(self.get(

@@ -185,7 +185,12 @@ def start(params, client_ip=None, profile_id=None, trigger="manual"):
                     families=params.get("families") or [], fast=bool(params.get("fast")),
                     debug_mode=params.get("debug") or "none", keep_objects=bool(params.get("keep", True)),
                     status="pending", summary={"set": params.get("set") or [], "repo": params.get("repo"),
-                                                "zone": params.get("zone")})
+                                                "zone": params.get("zone"),
+                                                "credentials": params.get("credentials") or [],
+                                                "reports": params.get("reports") or [],
+                                                "max_scan_time": params.get("max_scan_time") or "unlimited",
+                                                "inactivity_hours": params.get("inactivity_hours") or 12,
+                                                "remove_unresponsive": params.get("remove_unresponsive", True)})
         s.add(r)
         s.flush()
         run_id = r.id
@@ -236,7 +241,12 @@ def _run(run_id, p, name, cancel_ev):
             debug_on = True
         repo = pick_repo(sc, p.get("repo") or None)
         scan = create_was_scan(sc, name, policy_id, p["url"], repo, p.get("zone") or None,
-                               "WAS Cockpit run {}".format(run_id))
+                               "WAS Cockpit run {}".format(run_id),
+                               credentials=p.get("credentials") or None,
+                               max_scan_time=p.get("max_scan_time") or "unlimited",
+                               inactivity_hours=p.get("inactivity_hours") or 12,
+                               remove_unresponsive=p.get("remove_unresponsive", True),
+                               report_ids=p.get("reports") or None)
         created["scan"] = str(scan.get("id"))
         update(run_id, sc_scan_id=created["scan"], status="launching")
         st.audit("was_scan_create", run_id=run_id, scan_id=created["scan"], policy_id=policy_id)

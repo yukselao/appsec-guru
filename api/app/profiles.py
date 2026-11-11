@@ -22,7 +22,8 @@ from . import settings as st
 log = logging.getLogger("scheduler")
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 PROFILE_FIELDS = ("name", "description", "folder_id", "sensor_id", "target_url", "source_policy_id", "families", "debug_mode",
-                  "scope", "prefs", "keep_objects", "repo_id", "zone_id", "schedule", "enabled")
+                  "scope", "prefs", "keep_objects", "repo_id", "zone_id", "credential_ids", "report_ids",
+                  "max_scan_time", "inactivity_hours", "remove_unresponsive", "schedule", "enabled")
 
 
 def local_now():
@@ -97,7 +98,9 @@ def row(p, last=None):
     return {"id": p.id, "name": p.name, "description": p.description, "folder_id": p.folder_id, "sensor_id": p.sensor_id,
             "target_url": p.target_url, "source_policy_id": p.source_policy_id, "families": p.families,
             "debug_mode": p.debug_mode, "scope": p.scope, "prefs": p.prefs, "keep_objects": p.keep_objects,
-            "repo_id": p.repo_id, "zone_id": p.zone_id, "schedule": p.schedule, "schedule_text": describe(p.schedule),
+            "repo_id": p.repo_id, "zone_id": p.zone_id, "credential_ids": p.credential_ids or [], "report_ids": p.report_ids or [],
+            "max_scan_time": p.max_scan_time, "inactivity_hours": p.inactivity_hours, "remove_unresponsive": p.remove_unresponsive,
+            "schedule": p.schedule, "schedule_text": describe(p.schedule),
             "enabled": p.enabled, "next_run_at": p.next_run_at.isoformat() if p.next_run_at else None,
             "last_run_at": p.last_run_at.isoformat() if p.last_run_at else None, "last_run_id": p.last_run_id,
             "last_run": last, "created_at": p.created_at.isoformat() if p.created_at else None,
@@ -108,7 +111,9 @@ def run_params(p):
     """Translate a profile into runs.start() parameters."""
     return {"url": p.target_url, "policy": p.source_policy_id, "sensor_id": p.sensor_id, "families": p.families or [],
             "fast": p.scope == "fast", "debug": p.debug_mode, "keep": p.keep_objects, "repo": p.repo_id,
-            "zone": p.zone_id, "set": p.prefs or [], "name": "{}{}-{}".format(
+            "zone": p.zone_id, "set": p.prefs or [], "credentials": p.credential_ids or [], "reports": p.report_ids or [],
+            "max_scan_time": p.max_scan_time, "inactivity_hours": p.inactivity_hours, "remove_unresponsive": p.remove_unresponsive,
+            "name": "{}{}-{}".format(
                 "tscdbg-", "".join(c if c.isalnum() else "-" for c in p.name.lower())[:40].strip("-"),
                 local_now().strftime("%Y%m%d-%H%M"))}
 

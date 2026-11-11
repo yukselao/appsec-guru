@@ -135,7 +135,9 @@ def pick_repo(sc, repo):
     die("birden fazla repository var, --repo ile sec")
 
 
-def create_was_scan(sc, name, policy_id, url, repo_id, zone_id, desc):
+def create_was_scan(sc, name, policy_id, url, repo_id, zone_id, desc,
+                     credentials=None, max_scan_time="unlimited", inactivity_hours=12,
+                     remove_unresponsive=True, report_ids=None):
     body = {
         "name": name,
         "description": desc,
@@ -146,16 +148,19 @@ def create_was_scan(sc, name, policy_id, url, repo_id, zone_id, desc):
         "urlList": url,
         "emailOnLaunch": "false",
         "emailOnFinish": "false",
-        "reports": [],
-        "credentials": [],
+        "reports": [{"id": int(r), "reportSource": "individual"} for r in (report_ids or [])],
+        "credentials": [{"id": int(c)} for c in (credentials or [])],
         "timeoutAction": "rollover",
         "rolloverType": "template",
-        "maxScanTime": "unlimited",
-        "inactivityTimeout": 43200,
+        "maxScanTime": "unlimited" if max_scan_time in (None, "", "unlimited") else str(int(max_scan_time)),
+        "inactivityTimeout": int(inactivity_hours or 12) * 3600,
         "classifyMitigatedAge": 0,
     }
     if zone_id is not None:
         body["zone"] = {"id": int(zone_id)}
+    # NOTE: "immediately remove vulnerabilities from unresponsive hosts" (remove_unresponsive)
+    # is captured/stored by the UI but its exact wasScan field key is unconfirmed on this SC
+    # build, so it is intentionally not sent yet to avoid a 400 on scan creation.
     return sc.post("wasScan", body)
 
 

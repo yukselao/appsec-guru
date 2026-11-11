@@ -230,6 +230,21 @@ def sc_repos():
     return {"repos": conn.sc().repositories()}
 
 
+@router.get("/sc/zones")
+def sc_zones():
+    return {"zones": conn.sc().zones()}
+
+
+@router.get("/sc/credentials")
+def sc_credentials():
+    return {"credentials": conn.sc().credentials()}
+
+
+@router.get("/sc/reports")
+def sc_reports():
+    return {"reports": conn.sc().report_definitions()}
+
+
 @router.get("/sc/results")
 def sc_results(days: int = 14):
     rows = conn.sc().scan_results_recent(since_seconds=days * 86400)
@@ -335,6 +350,15 @@ def _profile_data(body):
     for k in ("repo_id", "zone_id", "folder_id", "sensor_id"):
         if k in d:
             d[k] = int(d[k]) if d[k] not in (None, "") else None
+    for k in ("credential_ids", "report_ids"):
+        if k in d:
+            d[k] = [int(x) for x in (d[k] or []) if str(x).strip()]
+    if "inactivity_hours" in d:
+        d["inactivity_hours"] = int(d["inactivity_hours"] or 12)
+    if "max_scan_time" in d:
+        d["max_scan_time"] = str(d["max_scan_time"] or "unlimited")[:16]
+    if "remove_unresponsive" in d:
+        d["remove_unresponsive"] = bool(d["remove_unresponsive"])
     return d
 
 

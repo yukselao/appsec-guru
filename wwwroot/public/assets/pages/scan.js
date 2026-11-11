@@ -1,12 +1,46 @@
 (function ($, WT) {
   'use strict';
-  const LAST = 5;
+  const LAST = 7;
   const PRESETS = {
     'auth-inj': ['Authentication & Session', 'Injection'],
     inj: ['Injection'],
     xss: ['Cross Site Scripting', 'HTTP Security Header'],
   };
-  const st = {step: 1, policies: [], families: [], policy: null, picked: new Set(), watch: null};
+  const st = {step: 1, policies: [], families: [], policy: null, picked: new Set(), creds: [], reports: [], watch: null};
+
+  // ---- credential + report rows (SC-style) ----
+  function credTypeLabel(t) {
+    if (t === 'webAuthentication') return 'Web Authentication';
+    return String(t || '').replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim();
+  }
+  function credTypes() { return [...new Set(st.creds.map(c => c.type))]; }
+  function fillCredId($row) {
+    const t = $row.find('.credType').val();
+    const list = st.creds.filter(c => c.type === t);
+    $row.find('.credId').html(list.map(c => `<option value="${WT.esc(c.id)}">${WT.esc(c.name)}</option>`).join(''));
+  }
+  function addCredRow(selType, selId) {
+    const types = credTypes();
+    if (!types.length) { WT.warn('No credentials defined on Security Center'); return; }
+    const $row = $(`<div class="cred-row row g-2 align-items-end mb-2">
+      <div class="col-sm-5"><select class="form-select form-select-sm credType">${types.map(t => `<option value="${WT.esc(t)}">${WT.esc(credTypeLabel(t))}</option>`).join('')}</select></div>
+      <div class="col-sm-5"><select class="form-select form-select-sm credId"></select></div>
+      <div class="col-sm-2"><button type="button" class="btn btn-sm btn-outline-danger w-100 credDel">Remove</button></div></div>`);
+    $('#fCreds').append($row);
+    if (selType) $row.find('.credType').val(selType);
+    fillCredId($row);
+    if (selId != null) $row.find('.credId').val(String(selId));
+  }
+  function collectCreds() { return $('#fCreds .credId').map((i, el) => parseInt(el.value, 10)).get().filter(Boolean); }
+  function addReportRow(selId) {
+    if (!st.reports.length) { WT.warn('No report definitions on Security Center'); return; }
+    const $row = $(`<div class="rep-row row g-2 align-items-end mb-2">
+      <div class="col-sm-10"><select class="form-select form-select-sm repId">${st.reports.map(r => `<option value="${WT.esc(r.id)}">${WT.esc(r.name)}</option>`).join('')}</select></div>
+      <div class="col-sm-2"><button type="button" class="btn btn-sm btn-outline-danger w-100 repDel">Remove</button></div></div>`);
+    $('#fReports').append($row);
+    if (selId != null) $row.find('.repId').val(String(selId));
+  }
+  function collectReports() { return $('#fReports .repId').map((i, el) => parseInt(el.value, 10)).get().filter(Boolean); }
 
   // ------------------------------------------------------------- navigation
   function go(n) {
@@ -37,6 +71,9 @@
     return {url: $('#fUrl').val().trim(), name: $('#fName').val().trim(), policy: st.policy ? st.policy.id : null,
       families: [...st.picked], fast: scope() === 'fast', debug: debugMode(), keep: $('#fKeep').prop('checked'),
       repo: $('#fRepo').val() ? parseInt($('#fRepo').val(), 10) : null, zone: $('#fZone').val() ? parseInt($('#fZone').val(), 10) : null,
+      credentials: collectCreds(), reports: collectReports(),
+      max_scan_time: $('#fMaxTime').val(), inactivity_hours: parseInt($('#fInactivity').val(), 10),
+      remove_unresponsive: $('#fRemoveUnresp').prop('checked'),
       sensor_id: $('#fSensor').val() || null, set};
   }
   function famNames(ids) { return (ids || []).map(id => (st.families.find(f => f.id === id) || {}).name || id); }
@@ -133,6 +170,9 @@
       <tr><th>Debug</th><td>${WT.esc(debug)}</td></tr>
       <tr><th>Scope</th><td>${{fast: 'fast (150 pages, 45 min)', policy: 'policy limits', custom: 'custom'}[scope()]}</td></tr>
       <tr><th>Keep on Security Center</th><td>${b.keep ? 'yes' : 'no, delete the scan and the copied policy at the end'}</td></tr>
+      <tr><th>Max scan duration</th><td>${b.max_scan_time === 'unlimited' ? 'unlimited' : WT.esc(b.max_scan_time) + ' h'} · inactivity ${WT.esc(b.inactivity_hours)} h</td></tr>
+      ${b.credentials.length ? `<tr><th>Credentials</th><td>${b.credentials.map(id => `<span class="badge text-bg-light border me-1">${WT.esc((st.creds.find(c => String(c.id) === String(id)) || {}).name || id)}</span>`).join('')}</td></tr>` : ''}
+      ${b.reports.length ? `<tr><th>Reports on completion</th><td>${b.reports.map(id => `<span class="badge text-bg-light border me-1">${WT.esc((st.reports.find(r => String(r.id) === String(id)) || {}).name || id)}</span>`).join('')}</td></tr>` : ''}
       ${b.set.length ? `<tr><th>Policy preferences</th><td class="mono small">${b.set.map(WT.esc).join('<br>')}</td></tr>` : ''}
     </tbody></table>`);
   }
@@ -157,6 +197,11 @@
   $('#wzNext').on('click', () => go(st.step + 1));
   $('#wzBack').on('click', () => go(st.step - 1));
   $('#wzSteps').on('click', 'li', function () { go($(this).data('step')); });
+  $('#fAddCred').on('click', () => addCredRow());
+  $('#fAddReport').on('click', () => addReportRow());
+  $(document).on('click', '.credDel', function () { $(this).closest('.cred-row').remove(); });
+  $(document).on('click', '.repDel', function () { $(this).closest('.rep-row').remove(); });
+  $(document).on('change', '.credType', function () { fillCredId($(this).closest('.cred-row')); });
   $('#fUrl, #fName').on('input', summary);
   $('#recentTargets').on('click', '[data-target]', function () { $('#fUrl').val($(this).data('target')); summary(); WT.toast('Target set'); });
   $('#wzLaunch').on('click', function () {
@@ -177,6 +222,14 @@
     renderPolicies(); renderFamilies();
     selectPolicy(qs.get('policy') || (st.policies.find(x => (x.families || []).length < st.families.length) || st.policies[0] || {}).id);
   }).catch(e => WT.fail(e, 'Could not load policies'));
+  $.when(WT.get('/sc/repos'), WT.get('/sc/zones'), WT.get('/sc/credentials'), WT.get('/sc/reports')).then((r, z, c, rp) => {
+    const repos = r[0].repos || [], zones = z[0].zones || [];
+    st.creds = c[0].credentials || []; st.reports = rp[0].reports || [];
+    $('#fRepo').html('<option value="">' + (repos.length ? '— auto —' : 'no repositories') + '</option>' +
+      repos.map(x => `<option value="${WT.esc(x.id)}">${WT.esc(x.name)}${x.type ? ' · ' + WT.esc(x.type) : ''}</option>`).join(''));
+    $('#fZone').html('<option value="">— default scan zone —</option>' +
+      zones.map(x => `<option value="${WT.esc(x.id)}">${WT.esc(x.name)}</option>`).join(''));
+  }).catch(() => { /* repos/zones/creds/reports are optional; leave the selects with their defaults */ });
   WT.get('/scans?limit=30').then(r => {
     const seen = [...new Set(r.runs.map(x => x.target_url))].slice(0, 10);
     if (seen.length) $('#recentTargets').html(seen.map(u => `<button type="button" class="btn btn-sm btn-outline-secondary" data-target="${WT.esc(u)}">${WT.esc(u)}</button>`).join(''));
