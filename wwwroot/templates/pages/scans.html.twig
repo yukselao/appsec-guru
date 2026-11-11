@@ -58,8 +58,13 @@
     </section>
     <section class="wizard-pane" data-pane="3">
       <div class="row g-3">
-        <div class="col-md-4"><label class="form-label" for="pmScope">Scope</label><select class="form-select" id="pmScope">
-          <option value="fast">Fast (150 pages, 45 min)</option><option value="policy">As in the policy</option></select></div>
+        <div class="col-md-4">
+          <div class="d-flex align-items-center mb-1"><label class="form-label mb-0" for="pmScope">Scope</label>
+            <a href="#" class="info-dot ms-auto" tabindex="0" role="button" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-html="true"
+               data-bs-title="Scope controls how far the crawler goes and how long the scan may run.<br><br><b>Fast (150 pages, 45 min)</b> &mdash; caps the scan at 150 pages, crawl depth 4 and a 45-minute time limit. A quick pass, ideal for a first look or for reading the debug log.<br><br><b>As in the policy</b> &mdash; keeps the source policy's own page and time limits untouched (a full scan).<br><br>Either way these limits are written to a <i>copy</i> of the policy &mdash; your original policy is never changed."
+               aria-label="What does the Scope / Fast setting mean?">i</a></div>
+          <select class="form-select" id="pmScope">
+            <option value="fast">Fast (150 pages, 45 min)</option><option value="policy">As in the policy</option></select></div>
         <div class="col-md-4"><label class="form-label">Keep SC objects</label><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" id="pmKeep" checked><label class="form-check-label" for="pmKeep">keep scan &amp; copied policy</label></div></div>
         <div class="col-md-2"><label class="form-label" for="pmRepo">Repo id</label><input class="form-control" id="pmRepo"></div>
         <div class="col-md-2"><label class="form-label" for="pmZone">Zone id</label><input class="form-control" id="pmZone"></div>

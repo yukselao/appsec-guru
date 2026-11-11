@@ -154,6 +154,7 @@
     (sch.days || []).forEach(i => $('#d' + i).prop('checked', true));
     schedPreview();
     goStep(1);
+    $('#profModal [data-bs-toggle="tooltip"]').each((i, el) => bootstrap.Tooltip.getOrCreateInstance(el));
     bootstrap.Modal.getOrCreateInstance('#profModal').show();
   }
   function goStep(n) {
