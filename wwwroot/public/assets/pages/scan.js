@@ -65,7 +65,7 @@
   const debugMode = () => $('input[name=debug]:checked').val();
   const scope = () => $('input[name=scope]:checked').val();
   function body() {
-    const set = $('#fSet').val().split('\n').map(s => s.trim()).filter(Boolean);
+    const set = [];
     if (scope() === 'custom') set.push('was[scope]page_limit=' + ($('#fPages').val() || 300), 'was_timeout=' + $('#fTimeout').val(),
       'was[plugin][rate_limiter]requests_per_second=' + ($('#fRps').val() || 25));
     return {url: $('#fUrl').val().trim(), name: $('#fName').val().trim(), policy: st.policy ? st.policy.id : null,

@@ -31,6 +31,7 @@
         `<div class="folder-node ${S.folder === 'all' ? 'active' : ''}" data-folder="all"><span class="fl-name">${ICO.all} All scans</span><span class="badge rounded-pill text-bg-light border ms-1">${pr[0].scans.length}</span></div>` +
         kids(null).map(node).join('') +
         `<div class="folder-node ${S.folder === 'unfiled' ? 'active' : ''}" data-folder="unfiled"><span class="fl-name">${ICO.inbox} Unfiled</span><span class="badge rounded-pill text-bg-light border ms-1">${fr[0].unfiled}</span></div>`);
+      $('#moveFolder').html(folderOptions());
       profiles();
     }).catch(e => WT.fail(e));
   }
@@ -52,9 +53,28 @@
         return;
       }
       $('#profCards').html(`<div class="card"><div class="table-responsive"><table class="table align-middle wt-scan-table mb-0">
-        <thead><tr><th>Name</th><th>Target</th><th>Policy</th><th>Debug</th><th>Schedule</th><th>Last run</th><th>Next run</th><th class="text-end">Actions</th></tr></thead>
+        <thead><tr><th style="width:34px"><input type="checkbox" class="form-check-input" id="chkAll" title="Select all"></th><th>Name</th><th>Target</th><th>Policy</th><th>Debug</th><th>Schedule</th><th>Last run</th><th>Next run</th><th class="text-end">Actions</th></tr></thead>
         <tbody>${list.map(rowHtml).join('')}</tbody></table></div></div>`);
+      updateMoveBar();
     }).catch(e => $('#profErr').html(`<div class="alert alert-danger">${WT.esc(e)}</div>`));
+  }
+
+  function folderOptions() {
+    const opt = (f, depth) => `<option value="${f.id}">${'— '.repeat(depth)}${WT.esc(f.name)}</option>` +
+      S.folders.filter(c => c.parent_id === f.id).map(c => opt(c, depth + 1)).join('');
+    return '<option value="">Unfiled</option>' + S.folders.filter(f => !f.parent_id).map(f => opt(f, 0)).join('');
+  }
+  function updateMoveBar() {
+    const $chk = $('.scanchk'), n = $chk.filter(':checked').length, total = $chk.length;
+    $('#moveCount').text(n);
+    $('#moveBar').toggleClass('d-none', n === 0).toggleClass('d-flex', n > 0);
+    $('#chkAll').prop('checked', total > 0 && n === total).prop('indeterminate', n > 0 && n < total);
+  }
+  function scanPrefs() {
+    if ($('#pmScope').val() !== 'custom') return [];
+    return ['was[scope]page_limit=' + ($('#pmPages').val() || 10),
+      'was_timeout=' + ($('#pmTime').val() || '00:30:00'),
+      'was[plugin][rate_limiter]requests_per_second=' + ($('#pmRps').val() || 25)];
   }
 
   function rowHtml(p) {
@@ -66,6 +86,7 @@
       ? `<a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''}${last.findings ? ` · <a href="/scan-results/${last.id}">${last.findings} findings</a>` : ''}`
       : '<span class="text-body-secondary">—</span>';
     return `<tr class="scan-row ${accent}">
+      <td><input type="checkbox" class="form-check-input scanchk" value="${p.id}"></td>
       <td><div class="d-flex align-items-center gap-2"><span class="fw-semibold text-truncate" style="max-width:220px" title="${WT.esc(p.name)}">${WT.esc(p.name)}</span>${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>${p.description ? `<div class="small text-body-secondary text-truncate" style="max-width:260px">${WT.esc(p.description)}</div>` : ''}</td>
       <td><span class="mono small text-truncate d-inline-block" style="max-width:240px" title="${WT.esc(p.target_url)}">${WT.esc(p.target_url)}</span></td>
       <td class="small">${WT.esc(p.source_policy_id)} <span class="text-body-secondary">· ${p.families.length ? p.families.length + ' families' : 'policy families'}</span></td>
@@ -176,10 +197,17 @@
     $('#pmSensor').val(d.sensor_id || (S.sensors.find(s => s.is_default) || {}).id || '');
     $('#pmPolicy').val(d.source_policy_id || (S.policies[0] || {}).id);
     $('#pmDebug').val(d.debug_mode || 'both'); $('#pmScope').val(d.scope || 'fast');
+    $('#pmCustomScope').toggleClass('d-none', (d.scope || 'fast') !== 'custom');
+    if (d.scope === 'custom') {
+      const pf = {}; (d.prefs || []).forEach(x => { const i = x.indexOf('='); if (i > 0) pf[x.slice(0, i)] = x.slice(i + 1); });
+      if (pf['was[scope]page_limit']) $('#pmPages').val(pf['was[scope]page_limit']);
+      if (pf['was_timeout']) $('#pmTime').val(pf['was_timeout']);
+      if (pf['was[plugin][rate_limiter]requests_per_second']) $('#pmRps').val(pf['was[plugin][rate_limiter]requests_per_second']);
+    }
     $('#pmKeep').prop('checked', d.keep_objects !== false); $('#pmRepo').val(d.repo_id || ''); $('#pmZone').val(d.zone_id || '');
     $('#pmMaxTime').val(d.max_scan_time || 'unlimited'); $('#pmInactivity').val(String(d.inactivity_hours || 12));
     $('#pmRemoveUnresp').prop('checked', d.remove_unresponsive !== false);
-    $('#pmSet').val((d.prefs || []).join('\n')); $('#pmEnabled').prop('checked', d.enabled !== false); $('#pmRunNow').prop('checked', false);
+    $('#pmEnabled').prop('checked', d.enabled !== false); $('#pmRunNow').prop('checked', false);
     (d.families || []).forEach(n => $(`.pmFam[value="${CSS.escape(n)}"]`).prop('checked', true));
     $('#pmCreds').empty(); (d.credential_ids || []).forEach(cid => {
       const c = S.creds.find(x => String(x.id) === String(cid)); addCredRow(c ? c.type : null, cid);
@@ -212,7 +240,7 @@
       credential_ids: collectCreds(), report_ids: collectReports(),
       max_scan_time: $('#pmMaxTime').val(), inactivity_hours: parseInt($('#pmInactivity').val(), 10),
       remove_unresponsive: $('#pmRemoveUnresp').prop('checked'),
-      prefs: $('#pmSet').val().split('\n').map(x => x.trim()).filter(Boolean), schedule: schedule(),
+      prefs: scanPrefs(), schedule: schedule(),
       enabled: $('#pmEnabled').prop('checked'), run_now: $('#pmRunNow').prop('checked')};
   }
 
@@ -240,6 +268,17 @@
   $(document).on('click', '.credDel', function () { $(this).closest('.cred-row').remove(); });
   $(document).on('click', '.repDel', function () { $(this).closest('.rep-row').remove(); });
   $(document).on('change', '.credType', function () { fillCredId($(this).closest('.cred-row')); });
+  $('#pmScope').on('change', function () { $('#pmCustomScope').toggleClass('d-none', this.value !== 'custom'); });
+  // ---- bulk move ----
+  $(document).on('change', '.scanchk', updateMoveBar);
+  $(document).on('change', '#chkAll', function () { $('.scanchk').prop('checked', this.checked); updateMoveBar(); });
+  $('#moveClear').on('click', () => { $('.scanchk, #chkAll').prop('checked', false); updateMoveBar(); });
+  $('#moveBtn').on('click', function () {
+    const ids = $('.scanchk:checked').map((i, el) => parseInt(el.value, 10)).get();
+    if (!ids.length) return;
+    WT.post('/tenable-was-scans/move', {ids, folder_id: $('#moveFolder').val() || null})
+      .then(r => { WT.ok(`Moved ${r.moved} scan${r.moved === 1 ? '' : 's'}`); tree(); }).catch(e => WT.fail(e));
+  });
   $('#pmSchedType').on('change', schedFields);
   $(document).on('input change', '#pmSchedFields :input, .pmDay', schedPreview);
   $('#pmSave').on('click', function () {

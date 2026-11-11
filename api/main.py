@@ -419,6 +419,27 @@ def profile_create(req: Request, body: dict = Body(...)):
     return _save_profile(None, body, ip(req))
 
 
+@router.post("/tenable-was-scans/move")
+def scans_move(req: Request, body: dict = Body(...)):
+    """Bulk-move saved scans into a folder (or to Unfiled when folder_id is empty)."""
+    ids = [int(x) for x in (body.get("ids") or [])]
+    if not ids:
+        raise HTTPException(400, "no scans selected")
+    fid = body.get("folder_id")
+    fid = int(fid) if fid not in (None, "", "unfiled") else None
+    with session_scope() as s:
+        if fid is not None and not s.get(ScanFolder, fid):
+            raise HTTPException(404, "folder not found")
+        moved = 0
+        for pid in ids:
+            p = s.get(TenableWasScan, pid)
+            if p:
+                p.folder_id = fid
+                moved += 1
+    st.audit("tenable_was_scan_move", client_ip=ip(req), count=moved, folder_id=fid)
+    return {"moved": moved, "folder_id": fid}
+
+
 @router.put("/tenable-was-scans/{pid}")
 def profile_update(pid: int, req: Request, body: dict = Body(...)):
     return _save_profile(pid, body, ip(req))

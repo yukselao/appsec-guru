@@ -25,6 +25,13 @@
       </div>
     </div>
     <div id="profErr"></div>
+    <div id="moveBar" class="d-none align-items-center gap-2 mb-2 p-2 rounded border bg-body-tertiary">
+      <span class="small fw-semibold"><span id="moveCount">0</span> selected</span>
+      <span class="small text-body-secondary">move to</span>
+      <select class="form-select form-select-sm" id="moveFolder" style="max-width:240px"></select>
+      <button class="btn btn-sm btn-primary" id="moveBtn">Move</button>
+      <button class="btn btn-sm btn-link text-decoration-none" id="moveClear">Clear</button>
+    </div>
     <div id="profCards"></div>
   </div>
 </div>
@@ -74,10 +81,10 @@
         <div class="col-md-4">
           <div class="d-flex align-items-center mb-1"><label class="form-label mb-0" for="pmScope">Scope</label>
             <a href="#" class="info-dot ms-auto" tabindex="0" role="button" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-html="true"
-               data-bs-title="Scope controls how far the crawler goes and how long the scan may run.<br><br><b>Fast (150 pages, 45 min)</b> &mdash; caps the scan at 150 pages, crawl depth 4 and a 45-minute time limit. A quick pass, ideal for a first look or for reading the debug log.<br><br><b>As in the policy</b> &mdash; keeps the source policy's own page and time limits untouched (a full scan).<br><br>Either way these limits are written to a <i>copy</i> of the policy &mdash; your original policy is never changed."
-               aria-label="What does the Scope / Fast setting mean?">i</a></div>
+               data-bs-title="Scope = the crawl limits AppSec Guru writes into a <i>copy</i> of your policy right before launching. Your source policy is never changed; the limits do not come from the policy, the tool sets them.<br><br><b>Fast (150 pages, 45 min)</b> writes: <code>was[scope]page_limit=150</code>, <code>directory_depth_limit=4</code>, <code>dom_depth_limit=3</code>, <code>was_timeout=00:45:00</code>, <code>was[http]request_concurrency=10</code>. A quick pass, good for a first look or reading the debug log.<br><br><b>As in the policy</b> writes nothing &mdash; the source policy's own limits apply (a full scan).<br><br><b>Custom</b> &mdash; set your own page limit (e.g. 10 for a quick test), time limit and requests/second."
+               aria-label="What does the Scope setting mean?">i</a></div>
           <select class="form-select" id="pmScope">
-            <option value="fast">Fast (150 pages, 45 min)</option><option value="policy">As in the policy</option></select></div>
+            <option value="fast">Fast (150 pages, 45 min)</option><option value="policy">As in the policy</option><option value="custom">Custom (set your own limits)</option></select></div>
         <div class="col-md-4"><label class="form-label" for="pmDebug">Debug</label><select class="form-select" id="pmDebug">
           <option value="none">Off</option><option value="sc">Policy only</option><option value="host">Scanner log only</option><option value="both" selected>Full debug</option></select></div>
         <div class="col-md-4"><label class="form-label">Keep SC objects</label><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" id="pmKeep" checked><label class="form-check-label" for="pmKeep">keep scan &amp; copied policy</label></div></div>
@@ -86,7 +93,12 @@
         <div class="col-md-4"><label class="form-label" for="pmInactivity">Inactivity timeout (hours)</label><select class="form-select" id="pmInactivity">
           <option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="6">6</option><option value="12" selected>12</option><option value="24">24</option></select></div>
         <div class="col-md-4"><label class="form-label">Unresponsive hosts</label><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" id="pmRemoveUnresp" checked><label class="form-check-label small" for="pmRemoveUnresp">Immediately remove vulnerabilities from hosts that do not reply</label></div></div>
-        <div class="col-12"><label class="form-label" for="pmSet">Extra preferences (name=value per line)</label><textarea class="form-control mono" id="pmSet" rows="2"></textarea></div>
+        <div class="col-12 d-none" id="pmCustomScope"><div class="row g-2 p-2 rounded bg-body-tertiary border">
+          <div class="col-12"><span class="small text-body-secondary">Custom scope &mdash; written into the policy copy as WAS preferences.</span></div>
+          <div class="col-sm-4"><label class="form-label small" for="pmPages">Page limit</label><input class="form-control" id="pmPages" type="number" min="1" value="10"></div>
+          <div class="col-sm-4"><label class="form-label small" for="pmTime">Time limit (hh:mm:ss)</label><input class="form-control" id="pmTime" value="00:30:00"></div>
+          <div class="col-sm-4"><label class="form-label small" for="pmRps">Requests per second</label><input class="form-control" id="pmRps" type="number" min="1" value="25"></div>
+        </div></div>
       </div>
     </section>
 
