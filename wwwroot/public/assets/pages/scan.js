@@ -74,7 +74,7 @@
       credentials: collectCreds(), reports: collectReports(),
       max_scan_time: $('#fMaxTime').val(), inactivity_hours: parseInt($('#fInactivity').val(), 10),
       remove_unresponsive: $('#fRemoveUnresp').prop('checked'),
-      sensor_id: $('#fSensor').val() || null, set};
+      sensor_id: null, set};
   }
   function famNames(ids) { return (ids || []).map(id => (st.families.find(f => f.id === id) || {}).name || id); }
   function summary() {
@@ -216,7 +216,6 @@
   const qs = new URLSearchParams(location.search);
   if (qs.get('target')) $('#fUrl').val(qs.get('target'));
   renderApps();
-  WT.sensorSelect('#fSensor', {hideWhenSingle: false});
   $.when(WT.get('/sc/families'), WT.get('/sc/policies?detail=1')).then((f, p) => {
     st.families = f[0].families; st.policies = p[0].policies;
     renderPolicies(); renderFamilies();

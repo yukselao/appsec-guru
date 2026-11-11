@@ -38,7 +38,7 @@
   function profiles() {
     WT.get('/profiles?folder=' + S.folder).then(r => {
       $('#profCount').text(r.profiles.length);
-      const folderName = S.folder === 'all' ? 'All scan profiles' : S.folder === 'unfiled' ? 'Unfiled profiles'
+      const folderName = S.folder === 'all' ? 'All scans' : S.folder === 'unfiled' ? 'Unfiled scans'
         : (S.folders.find(f => f.id == S.folder) || {}).name || 'Profiles';
       $('#folderTitle').text(folderName);
       const q = ($('#profSearch').val() || '').toLowerCase();
@@ -46,9 +46,9 @@
       $('#profCards').html(list.length ? list.map(card).join('')
         : `<div class="col-12"><div class="profile-empty text-center py-5">
             <div class="mb-2 text-body-secondary">${ICO.layers}</div>
-            <div class="fw-semibold">No scan profiles here</div>
+            <div class="fw-semibold">No scans here</div>
             <div class="small text-body-secondary mb-3">Create a reusable scan: a target, policy, families and a schedule.</div>
-            <button class="btn btn-primary btn-sm" id="emptyNew">New scan profile</button></div></div>`);
+            <button class="btn btn-primary btn-sm" id="emptyNew">New scan</button></div></div>`);
     }).catch(e => $('#profErr').html(`<div class="alert alert-danger">${WT.esc(e)}</div>`));
   }
 
@@ -167,9 +167,8 @@
 
   function openWizard(p) {
     S.editing = p ? p.id : null; S.step = 1;
-    $('#pmTitle').text(p ? 'Edit scan profile' : 'New scan profile');
+    $('#pmTitle').text(p ? 'Edit Scan' : 'New Scan');
     $('#pmFolder').html('<option value="">Unfiled</option>' + S.folders.map(f => `<option value="${f.id}">${WT.esc(f.name)}</option>`).join(''));
-    $('#pmSensor').html(S.sensors.map(s => `<option value="${s.id}">${WT.esc(s.name)}${s.is_default ? ' (default)' : ''}</option>`).join(''));
     $('#pmPolicy').html(S.policies.map(x => `<option value="${WT.esc(x.id)}">${WT.esc(x.id)} · ${WT.esc(x.name)}</option>`).join(''));
     $('#pmFamilies').html(S.families.map(f => `<div class="col"><div class="form-check"><input class="form-check-input pmFam" type="checkbox" value="${WT.esc(f.name)}" id="pf${f.id}"><label class="form-check-label" for="pf${f.id}">${WT.esc(f.name)}</label></div></div>`).join(''));
     $('#pmRepo').html('<option value="">' + ((S.repos || []).length ? '— auto —' : 'no repositories') + '</option>' +
@@ -179,7 +178,6 @@
     const d = p || {};
     $('#pmName').val(d.name || ''); $('#pmDesc').val(d.description || ''); $('#pmUrl').val(d.target_url || '');
     $('#pmFolder').val(d.folder_id || (S.folder !== 'all' && S.folder !== 'unfiled' ? S.folder : ''));
-    $('#pmSensor').val(d.sensor_id || (S.sensors.find(s => s.is_default) || {}).id || '');
     $('#pmPolicy').val(d.source_policy_id || (S.policies[0] || {}).id);
     $('#pmDebug').val(d.debug_mode || 'both'); $('#pmScope').val(d.scope || 'fast');
     $('#pmKeep').prop('checked', d.keep_objects !== false); $('#pmRepo').val(d.repo_id || ''); $('#pmZone').val(d.zone_id || '');
@@ -212,7 +210,7 @@
   }
   function profBody() {
     return {name: $('#pmName').val().trim(), description: $('#pmDesc').val().trim(), folder_id: $('#pmFolder').val() || null,
-      target_url: $('#pmUrl').val().trim(), sensor_id: $('#pmSensor').val() || null, source_policy_id: $('#pmPolicy').val(),
+      target_url: $('#pmUrl').val().trim(), sensor_id: null, source_policy_id: $('#pmPolicy').val(),
       families: $('.pmFam:checked').map((i, el) => el.value).get(), debug_mode: $('#pmDebug').val(), scope: $('#pmScope').val(),
       keep_objects: $('#pmKeep').prop('checked'), repo_id: $('#pmRepo').val() || null, zone_id: $('#pmZone').val() || null,
       credential_ids: collectCreds(), report_ids: collectReports(),
@@ -252,7 +250,7 @@
     const b = profBody();
     if (!b.name || !b.target_url) { WT.warn('Name and target URL are required'); goStep(1); return; }
     const req = S.editing ? WT.api('PUT', '/profiles/' + S.editing, b) : WT.post('/profiles', b);
-    req.then(r => { WT.ok('Profile saved'); bootstrap.Modal.getInstance('#profModal').hide();
+    req.then(r => { WT.ok('Scan saved'); bootstrap.Modal.getInstance('#profModal').hide();
       if (r.run_id) { location.href = '/scan-results/' + r.run_id; return; } tree(); }).catch(e => WT.fail(e));
   });
   $('#refreshProf').on('click', tree);

@@ -16,12 +16,12 @@
   {# ---------------- profiles ---------------- #}
   <div class="col-lg-9 col-xl-10">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-      <h2 class="h5 mb-0" id="folderTitle">All scan profiles</h2>
+      <h2 class="h5 mb-0" id="folderTitle">All scans</h2>
       <span class="badge text-bg-secondary" id="profCount">0</span>
       <div class="ms-auto d-flex gap-2 align-items-center">
         <input class="form-control form-control-sm" style="max-width:220px" id="profSearch" placeholder="Search profiles">
         <button class="btn btn-sm btn-outline-secondary" id="refreshProf" title="Refresh">Refresh</button>
-        <button class="btn btn-sm btn-primary text-nowrap" id="newProfile">New scan profile</button>
+        <button class="btn btn-sm btn-primary text-nowrap" id="newProfile">New scan</button>
       </div>
     </div>
     <div id="profErr"></div>
@@ -31,7 +31,7 @@
 
 {# ---------------- profile wizard modal ---------------- #}
 <div class="modal fade" id="profModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
-  <div class="modal-header"><h5 class="modal-title" id="pmTitle">New scan profile</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-header"><h5 class="modal-title" id="pmTitle">New Scan</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
   <div class="modal-body">
     <ol class="wizard-steps" id="pmSteps">
       <li class="active" data-step="1">General</li><li data-step="2">Settings</li>
@@ -41,7 +41,7 @@
     {# ---- 1 · General ---- #}
     <section class="wizard-pane active" data-pane="1">
       <div class="row g-3">
-        <div class="col-md-6"><label class="form-label" for="pmName">Profile name</label><input class="form-control" id="pmName" placeholder="Juice Shop nightly"></div>
+        <div class="col-md-6"><label class="form-label" for="pmName">Name</label><input class="form-control" id="pmName" placeholder="Juice Shop nightly"></div>
         <div class="col-md-6"><label class="form-label" for="pmFolder">Folder</label><select class="form-select" id="pmFolder"></select></div>
         <div class="col-12"><label class="form-label" for="pmDesc">Description</label><input class="form-control" id="pmDesc"></div>
         <div class="col-12"><label class="form-label" for="pmPolicy">Policy <span class="text-danger">*</span></label><select class="form-select" id="pmPolicy"></select></div>
@@ -64,9 +64,9 @@
     <section class="wizard-pane" data-pane="2">
       <h6 class="text-body-secondary text-uppercase small fw-semibold mb-2">Basic</h6>
       <div class="row g-3">
-        <div class="col-md-4"><label class="form-label" for="pmZone">Scan zone <span class="text-danger">*</span></label><select class="form-select" id="pmZone"></select></div>
-        <div class="col-md-4"><label class="form-label" for="pmRepo">Import repository</label><select class="form-select" id="pmRepo"></select></div>
-        <div class="col-md-4"><label class="form-label" for="pmSensor">Sensor</label><select class="form-select" id="pmSensor"></select></div>
+        <div class="col-md-6"><label class="form-label" for="pmZone">Scan zone <span class="text-danger">*</span></label><select class="form-select" id="pmZone"></select>
+          <div class="form-text">The zone's scanner runs the scan; AppSec Guru captures its log automatically.</div></div>
+        <div class="col-md-6"><label class="form-label" for="pmRepo">Import repository</label><select class="form-select" id="pmRepo"></select></div>
       </div>
       <h6 class="text-body-secondary text-uppercase small fw-semibold mt-4 mb-2">Advanced</h6>
       <div class="row g-3">
@@ -115,7 +115,7 @@
     <div class="form-check form-switch me-auto"><input class="form-check-input" type="checkbox" id="pmRunNow"><label class="form-check-label" for="pmRunNow">Run immediately after saving</label></div>
     <button class="btn btn-outline-secondary" id="pmBack" disabled>Back</button>
     <button class="btn btn-primary" id="pmNext">Next</button>
-    <button class="btn btn-success d-none" id="pmSave">Save profile</button>
+    <button class="btn btn-success d-none" id="pmSave">Save</button>
   </div>
 </div></div></div>
 {% endblock %}
