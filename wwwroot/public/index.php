@@ -20,26 +20,47 @@ header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style
 // Breadcrumb: Dashboard > group > page > sub page
 $param = $parts[1] ?? null;
 $param2 = $parts[2] ?? null;
+$template = PAGES[$page]['template'];
+$finding = null;
 $crumbs = [['Dashboard', '/']];
 if ($page !== 'dashboard') {
     if (isset(PAGES[$page]['group'])) {
         $crumbs[] = [PAGES[$page]['group'], null];
     }
     $crumbs[] = [PAGES[$page]['title'], '/' . $page];
-    if ($page === 'scan-results' && $param === 'sc' && $param2) {
-        $crumbs[] = ['Security Center result ' . $param2, null];
+    if ($page === 'scan-results') {
+        // /scan-results/<run>[/finding/<plugin>[/<n>]]  or  /scan-results/sc/<result>[/finding/<plugin>[/<n>]]
+        $isSc = $param === 'sc' && $param2;
+        $rest = array_slice($parts, $isSc ? 3 : 2);
+        $base = $isSc ? '/scan-results/sc/' . rawurlencode($param2) : '/scan-results/' . rawurlencode((string) $param);
+        $hasFinding = ($rest[0] ?? '') === 'finding' && preg_match('/^\d+$/', $rest[1] ?? '');
+        if ($isSc) {
+            $crumbs[] = ['Security Center result ' . $param2, $hasFinding ? $base : null];
+        } elseif ($param !== null && $param !== '') {
+            $crumbs[] = ['Run #' . $param, $hasFinding ? $base : null];
+        }
+        if ($hasFinding && ($isSc || preg_match('/^\d+$/', (string) $param))) {
+            $n = isset($rest[2]) && preg_match('/^\d+$/', $rest[2]) ? (int) $rest[2] : null;
+            $finding = ['src' => $isSc ? 'sc' : 'run', 'ref' => $isSc ? $param2 : $param, 'plugin' => $rest[1], 'n' => $n, 'base' => $base];
+            $crumbs[] = ['Plugin ' . $rest[1], $n ? $base . '/finding/' . $rest[1] : null];
+            if ($n) {
+                $crumbs[] = ['Instance ' . $n, null];
+            }
+            $template = 'pages/finding.html.twig';
+        }
     } elseif ($param !== null && $param !== '') {
         $crumbs[] = ['Run #' . $param, null];
     }
 }
 
-echo twig()->render(PAGES[$page]['template'], [
+echo twig()->render($template, [
     'app_name' => getenv('APP_NAME') ?: 'AppSec Guru',
     'pages' => PAGES,
     'page' => $page,
     'title' => PAGES[$page]['title'],
     'param' => $param,
     'param2' => $param2,
+    'finding' => $finding,
     'crumbs' => $crumbs,
     'not_found' => $notFound ?? false,
 ]);

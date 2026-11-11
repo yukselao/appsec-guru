@@ -564,6 +564,32 @@ def scan_attachment(run_id: int, att_id: str):
     return Response(content=data, media_type=ctype)
 
 
+@router.get("/scans/{run_id}/findings/{plugin_id}")
+def scan_finding(run_id: int, plugin_id: str):
+    """One plugin of a run, straight from Security Center: reference data + every instance."""
+    from app import wasfindings
+    with session_scope() as s:
+        r = s.get(ScanRun, run_id)
+        rid = r.sc_result_id if r else None
+    if not rid:
+        raise HTTPException(404, "no Security Center result for this run")
+    out = wasfindings.plugin_details(conn.sc(), rid, plugin_id)
+    if not out:
+        raise HTTPException(404, "plugin not found in this result")
+    out["attachment_base"] = "/api/scans/{}/attachment/".format(run_id)
+    return out
+
+
+@router.get("/sc/results/{rid}/findings/{plugin_id}")
+def sc_result_finding(rid: str, plugin_id: str):
+    from app import wasfindings
+    out = wasfindings.plugin_details(conn.sc(), rid, plugin_id)
+    if not out:
+        raise HTTPException(404, "plugin not found in this result")
+    out["attachment_base"] = None
+    return out
+
+
 @router.post("/scans/{run_id}/refresh-findings")
 def scan_refresh_findings(run_id: int):
     with session_scope() as s:

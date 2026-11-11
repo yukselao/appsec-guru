@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div id="findingPage" data-src="{{ finding.src }}" data-ref="{{ finding.ref }}" data-plugin="{{ finding.plugin }}" data-n="{{ finding.n ?? '' }}" data-base="{{ finding.base }}">
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span id="fdSev"></span>
+    <h2 class="h5 mb-0" id="fdTitle">Plugin {{ finding.plugin }}</h2>
+    <span class="small text-body-secondary" id="fdSub"></span>
+    <div class="ms-auto d-flex gap-2" id="fdNav"></div>
+  </div>
+  <div id="fdBody"><div class="empty">Loading the finding from Security Center…</div></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/finding.js') }}"></script>{% endblock %}

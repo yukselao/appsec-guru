@@ -51,7 +51,6 @@
         <span class="badge rounded-pill text-bg-light border wt-conn" id="wtConn" title="Connection status">…</span>
         <a class="btn btn-sm btn-outline-secondary" href="/help" title="Help & references">{{ ic.icon('help') }}</a>
         <button class="btn btn-sm btn-outline-secondary" id="wtTheme" type="button" title="Toggle theme">{{ ic.icon('moon') }}</button>
-        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#wtChat" aria-controls="wtChat">{{ ic.icon('chat') }}<span class="d-none d-sm-inline ms-1">AI assistant</span></button>
       </div>
     </header>
 
@@ -77,30 +76,45 @@
   </div>
 </div>
 
-{# ---------------- AI chat (right offcanvas, every page) ---------------- #}
-<div class="offcanvas offcanvas-end wt-chat" tabindex="-1" id="wtChat" aria-labelledby="wtChatLabel">
-  <div class="offcanvas-header border-bottom">
-    <h5 class="offcanvas-title" id="wtChatLabel">AI assistant</h5>
-    <span class="badge text-bg-secondary ms-2" id="chatModel">no model</span>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-  </div>
-  <div class="offcanvas-body d-flex flex-column p-0">
-    <div class="wt-chat-log flex-grow-1 p-3" id="chatLog"></div>
-    <div class="border-top p-3">
-      <div class="d-flex flex-wrap gap-1 mb-2" id="chatAttachBtns">
-        <button class="btn btn-sm btn-outline-secondary" data-attach="screen">Log on screen</button>
-        <button class="btn btn-sm btn-outline-secondary" data-attach="errors">WARN/ERROR only</button>
-        <button class="btn btn-sm btn-outline-secondary" data-attach="status">Scan status</button>
-        <button class="btn btn-sm btn-outline-danger ms-auto" id="chatClear">Clear</button>
-      </div>
-      <div class="small text-body-secondary mb-1" id="chatAttachInfo"></div>
-      <textarea class="form-control" id="chatInput" rows="3" placeholder="Ask a question or paste log lines. Ctrl+Enter sends."></textarea>
-      <div class="d-flex gap-2 mt-2">
-        <button class="btn btn-primary" id="chatSend">Send</button>
-        <button class="btn btn-outline-secondary" id="chatStop" disabled>Stop</button>
+{# ---------------- AI assistant: floating robot (bottom right) + resizable window ---------------- #}
+<button type="button" class="wt-ai-fab" id="wtAiFab" data-bs-toggle="modal" data-bs-target="#wtChat" aria-label="Open the AI assistant" title="AI assistant">
+  <svg viewBox="0 0 64 64" aria-hidden="true">
+    <line x1="32" y1="6" x2="32" y2="14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <circle class="wt-ai-antenna" cx="32" cy="6" r="4" fill="currentColor"/>
+    <rect x="10" y="14" width="44" height="36" rx="12" fill="currentColor"/>
+    <rect x="3" y="26" width="6" height="14" rx="3" fill="currentColor"/><rect x="55" y="26" width="6" height="14" rx="3" fill="currentColor"/>
+    <g class="wt-ai-eyes"><circle cx="23" cy="30" r="5.5" fill="var(--ag-teal)"/><circle cx="41" cy="30" r="5.5" fill="var(--ag-teal)"/>
+      <circle cx="24.5" cy="28.5" r="1.8" fill="#fff"/><circle cx="42.5" cy="28.5" r="1.8" fill="#fff"/></g>
+    <path d="M23 40 q9 7 18 0" fill="none" stroke="var(--ag-teal)" stroke-width="3" stroke-linecap="round"/>
+    <rect x="22" y="52" width="20" height="7" rx="3.5" fill="currentColor"/>
+  </svg>
+</button>
+<div class="modal fade wt-chat" tabindex="-1" id="wtChat" aria-labelledby="wtChatLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" id="wtChatDialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="wtChatLabel">AI assistant</h5>
+      <span class="badge text-bg-secondary ms-2" id="chatModel">no model</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" id="chatMax" title="Maximise / restore" aria-label="Maximise or restore the window">Maximise</button>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body d-flex flex-column p-0">
+      <div class="wt-chat-log flex-grow-1 p-3" id="chatLog"></div>
+      <div class="border-top p-3">
+        <div class="d-flex flex-wrap gap-1 mb-2" id="chatAttachBtns">
+          <button class="btn btn-sm btn-outline-secondary" data-attach="screen">Log on screen</button>
+          <button class="btn btn-sm btn-outline-secondary" data-attach="errors">WARN/ERROR only</button>
+          <button class="btn btn-sm btn-outline-secondary" data-attach="status">Scan status</button>
+          <button class="btn btn-sm btn-outline-danger ms-auto" id="chatClear">Clear</button>
+        </div>
+        <div class="small text-body-secondary mb-1" id="chatAttachInfo"></div>
+        <textarea class="form-control" id="chatInput" rows="3" placeholder="Ask a question or paste log lines. Ctrl+Enter sends."></textarea>
+        <div class="d-flex gap-2 mt-2">
+          <button class="btn btn-primary" id="chatSend">Send</button>
+          <button class="btn btn-outline-secondary" id="chatStop" disabled>Stop</button>
+        </div>
       </div>
     </div>
-  </div>
+  </div></div>
 </div>
 
 {# All user messages (success, warning, error) appear here: top right, under the header. #}

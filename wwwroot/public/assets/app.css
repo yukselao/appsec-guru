@@ -53,7 +53,10 @@ body { background: var(--bs-tertiary-bg); }
 .chip { cursor: pointer; }
 
 /* ---------- chat ---------- */
-.wt-chat { --bs-offcanvas-width: min(560px, 100vw); }
+.wt-chat .modal-content { height: min(760px, 88vh); }
+.wt-chat .modal-fullscreen .modal-content { height: 100%; }
+.wt-chat .modal-body { min-height: 0; overflow: hidden; }
+.wt-chat-log { min-height: 0; }
 .wt-chat-log { overflow: auto; display: flex; flex-direction: column; gap: .6rem; }
 .bubble { border: 1px solid var(--bs-border-color); border-radius: .6rem; padding: .6rem .75rem; max-width: 95%; overflow-wrap: anywhere; font-size: .92rem; }
 .bubble.user { align-self: flex-end; background: var(--bs-primary-bg-subtle); }
@@ -206,8 +209,33 @@ body { background: var(--ag-bg); }
 
 /* ---------- scans table ---------- */
 .wt-scan-table td, .wt-scan-table th { vertical-align: middle; }
+.wt-scan-table .scan-target { max-width: clamp(14ch, 18vw, 40ch); }
 .scan-row td:first-child { box-shadow: inset 3px 0 0 transparent; }
 .scan-row.is-on td:first-child { box-shadow: inset 3px 0 0 var(--ag-teal); }
 .scan-row.is-running td:first-child { box-shadow: inset 3px 0 0 var(--bs-primary, #2f6fed); }
 .scan-row.is-off td:first-child { box-shadow: inset 3px 0 0 var(--ag-gray); }
 .scan-row.is-off { opacity: .7; }
+
+/* ---------- AI assistant robot (bottom right) ---------- */
+.wt-ai-fab { position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1040; width: 76px; height: 76px; padding: 12px; border: 0;
+  border-radius: 50%; background: var(--ag-teal); color: #fff; cursor: pointer;
+  box-shadow: 0 10px 24px rgba(28, 33, 38, .28); animation: wt-ai-bob 2.6s ease-in-out infinite; }
+.wt-ai-fab svg { width: 100%; height: 100%; display: block; }
+.wt-ai-fab .wt-ai-eyes circle:nth-child(-n+2), .wt-ai-fab path { fill: #1c2126; stroke: #1c2126; }
+.wt-ai-fab path { fill: none; }
+.wt-ai-fab::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--ag-teal); opacity: 0;
+  animation: wt-ai-ring 2.6s ease-out infinite; pointer-events: none; }
+.wt-ai-fab:hover, .wt-ai-fab:focus-visible { animation: none; transform: scale(1.08); outline: none; background: var(--ag-teal-dark); }
+.wt-ai-fab:focus-visible { box-shadow: 0 0 0 4px var(--ag-teal-soft), 0 10px 24px rgba(28, 33, 38, .28); }
+.wt-ai-fab .wt-ai-eyes { transform-origin: 32px 30px; animation: wt-ai-blink 4.2s infinite; }
+.wt-ai-fab .wt-ai-antenna { animation: wt-ai-glow 1.3s ease-in-out infinite alternate; }
+body.modal-open .wt-ai-fab { display: none; }
+.wt-footer { padding-right: 7.5rem; }
+@keyframes wt-ai-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-9px) rotate(3deg); } }
+@keyframes wt-ai-ring { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(1.45); opacity: 0; } }
+@keyframes wt-ai-blink { 0%, 44%, 50%, 100% { transform: scaleY(1); } 47% { transform: scaleY(.1); } }
+@keyframes wt-ai-glow { from { opacity: .55; } to { opacity: 1; } }
+@media (max-width: 575.98px) { .wt-ai-fab { width: 62px; height: 62px; right: 1rem; bottom: 1rem; } }
+@media (prefers-reduced-motion: reduce) { .wt-ai-fab, .wt-ai-fab::after, .wt-ai-fab .wt-ai-eyes, .wt-ai-fab .wt-ai-antenna { animation: none; } }
+
+.wt-content { padding-bottom: 6.5rem; }

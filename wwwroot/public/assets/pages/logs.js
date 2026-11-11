@@ -104,7 +104,7 @@
   $('#lgAi').on('click', () => {
     const ls = WT.logProvider.lines(false);
     WT.chat.addAttach(`${WT.logProvider.label()} · ${ls.length} lines`, ls.join('\n'));
-    bootstrap.Offcanvas.getOrCreateInstance('#wtChat').show();
+    WT.chat.open();
   });
   $('.chip').on('click', function () { $('#lgGrep').val($(this).data('preset')); start(); });
   $('.lv').on('change', redraw);

@@ -215,7 +215,15 @@
   $('#chatSend').on('click', Chat.send);
   $('#chatStop').on('click', () => Chat.ctrl && Chat.ctrl.abort());
   $('#chatInput').on('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); Chat.send(); } });
-  $('#wtChat').on('show.bs.offcanvas', () => {
+  Chat.open = () => bootstrap.Modal.getOrCreateInstance('#wtChat').show();
+  $('#chatMax').on('click', function () {
+    const full = $('#wtChatDialog').toggleClass('modal-fullscreen').hasClass('modal-fullscreen');
+    $(this).text(full ? 'Restore' : 'Maximise');
+    try { localStorage.setItem('wt-chat-max', full ? '1' : ''); } catch (e) { /* ignore */ }
+  });
+  try { if (localStorage.getItem('wt-chat-max')) { $('#wtChatDialog').addClass('modal-fullscreen'); $('#chatMax').text('Restore'); } } catch (e) { /* ignore */ }
+  $('#wtChat').on('shown.bs.modal', () => { const l = $('#chatLog')[0]; l.scrollTop = l.scrollHeight; $('#chatInput').trigger('focus'); });
+  $('#wtChat').on('show.bs.modal', () => {
     Chat.load();
     WT.get('/settings').then(r => { Chat.ctx = parseInt(r.settings['ai.ctx_chars'] || '24000', 10); });
   });

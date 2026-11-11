@@ -53,7 +53,7 @@
         return;
       }
       $('#profCards').html(`<div class="card"><div class="table-responsive"><table class="table align-middle wt-scan-table mb-0">
-        <thead><tr><th style="width:34px"><input type="checkbox" class="form-check-input" id="chkAll" title="Select all"></th><th>Name</th><th>Target</th><th>Policy</th><th>Debug</th><th>Schedule</th><th>Last run</th><th>Next run</th><th class="text-end">Actions</th></tr></thead>
+        <thead><tr><th style="width:34px"><input type="checkbox" class="form-check-input" id="chkAll" title="Select all"></th><th>Name</th><th>Target</th><th>Policy</th><th>Schedule</th><th>Last run</th><th class="text-end">Actions</th></tr></thead>
         <tbody>${list.map(rowHtml).join('')}</tbody></table></div></div>`);
       updateMoveBar();
     }).catch(e => $('#profErr').html(`<div class="alert alert-danger">${WT.esc(e)}</div>`));
@@ -80,27 +80,29 @@
   function rowHtml(p) {
     const last = p.last_run;
     const onDemand = (p.schedule || {}).type === 'on_demand' || !p.schedule;
-    const schedCls = !p.enabled || onDemand ? 'text-bg-light border' : 'sched-on';
+    const schedCls = !p.enabled || onDemand ? 'text-bg-light border' : 'text-bg-primary';
     const accent = !p.enabled ? 'is-off' : (last && last.active ? 'is-running' : 'is-on');
     const lastCell = last
       ? `<a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''}${last.findings ? ` · <a href="/scan-results/${last.id}">${last.findings} findings</a>` : ''}`
       : '<span class="text-body-secondary">—</span>';
     return `<tr class="scan-row ${accent}">
-      <td><input type="checkbox" class="form-check-input scanchk" value="${p.id}"></td>
-      <td><div class="d-flex align-items-center gap-2"><span class="fw-semibold text-truncate" style="max-width:220px" title="${WT.esc(p.name)}">${WT.esc(p.name)}</span>${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>${p.description ? `<div class="small text-body-secondary text-truncate" style="max-width:260px">${WT.esc(p.description)}</div>` : ''}</td>
-      <td><span class="mono small text-truncate d-inline-block" style="max-width:240px" title="${WT.esc(p.target_url)}">${WT.esc(p.target_url)}</span></td>
-      <td class="small">${WT.esc(p.source_policy_id)} <span class="text-body-secondary">· ${p.families.length ? p.families.length + ' families' : 'policy families'}</span></td>
-      <td class="small">${WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode)}</td>
-      <td><span class="badge rounded-pill ${schedCls} text-nowrap">${ICO.clock} ${WT.esc(p.schedule_text)}</span></td>
-      <td class="small">${lastCell}</td>
-      <td class="small text-nowrap">${p.next_run_at ? WT.dt(p.next_run_at) : '<span class="text-body-secondary">—</span>'}</td>
+      <td><input type="checkbox" class="form-check-input scanchk" value="${p.id}" aria-label="Select ${WT.esc(p.name)}"></td>
+      <td style="min-width:150px"><div class="d-flex align-items-center gap-2"><span class="fw-semibold">${WT.esc(p.name)}</span>${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>${p.description ? `<div class="small text-body-secondary">${WT.esc(p.description)}</div>` : ''}</td>
+      <td><span class="mono small text-truncate d-inline-block align-middle scan-target" title="${WT.esc(p.target_url)}">${WT.esc(p.target_url)}</span></td>
+      <td class="small text-nowrap">${WT.esc(p.source_policy_id)} <span class="text-body-secondary">· ${p.families.length ? p.families.length + ' families' : 'policy families'}</span><div class="text-body-secondary">debug ${WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode)}</div></td>
+      <td class="small text-nowrap"><span class="badge rounded-pill ${schedCls}">${WT.esc(p.schedule_text)}</span>${p.next_run_at ? `<div class="text-body-secondary mt-1">next ${new Date(p.next_run_at).toLocaleString('en-GB', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'})}</div>` : ''}</td>
+      <td class="small text-nowrap">${lastCell}</td>
       <td class="text-end text-nowrap">
         <div class="btn-group btn-group-sm" role="group">
-          <button class="btn btn-primary" data-run="${p.id}" title="Run now">${ICO.play}</button>
+          <button class="btn btn-primary" data-run="${p.id}" title="Run now">${ICO.play} Run</button>
           <button class="btn btn-outline-secondary" data-edit="${p.id}">Edit</button>
-          <button class="btn btn-outline-secondary" data-toggle="${p.id}">${p.enabled ? 'Disable' : 'Enable'}</button>
-          <button class="btn btn-outline-secondary" data-copy="${p.id}">Copy</button>
-          <button class="btn btn-outline-danger" data-delp="${p.id}">Delete</button>
+          <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="More actions for ${WT.esc(p.name)}">More</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><button class="dropdown-item" type="button" data-toggle="${p.id}">${p.enabled ? 'Disable schedule' : 'Enable schedule'}</button></li>
+            <li><button class="dropdown-item" type="button" data-copy="${p.id}">Duplicate</button></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item text-danger" type="button" data-delp="${p.id}">Delete</button></li>
+          </ul>
         </div></td></tr>`;
   }
 
@@ -258,7 +260,7 @@
   });
   $(document).on('click', '[data-toggle]', function () { WT.post('/tenable-was-scans/' + $(this).data('toggle') + '/toggle').then(r => { WT.ok(r.enabled ? 'Enabled' : 'Disabled'); profiles(); }).catch(e => WT.fail(e)); });
   $(document).on('click', '[data-copy]', function () { WT.post('/tenable-was-scans/' + $(this).data('copy') + '/copy').then(() => { WT.ok('Copied'); tree(); }).catch(e => WT.fail(e)); });
-  $(document).on('click', '[data-delp]', function () { const id = $(this).data('delp'); if (confirm('Delete profile #' + id + '?')) WT.api('DELETE', '/tenable-was-scans/' + id).then(() => { WT.ok('Deleted'); tree(); }).catch(e => WT.fail(e)); });
+  $(document).on('click', '[data-delp]', function () { const id = $(this).data('delp'); if (confirm('Delete scan #' + id + '? Its past runs are kept.')) WT.api('DELETE', '/tenable-was-scans/' + id).then(() => { WT.ok('Deleted'); tree(); }).catch(e => WT.fail(e)); });
   $('#pmNext').on('click', () => goStep(S.step + 1));
   $('#pmBack').on('click', () => goStep(S.step - 1));
   $('#pmSteps').on('click', 'li', function () { goStep($(this).data('step')); });

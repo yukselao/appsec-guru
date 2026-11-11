@@ -1,7 +1,12 @@
 (function ($, WT) {
   'use strict';
-  const findTable = f => f.length ? f.map(x => `<tr><td class="mono">${WT.esc(x.plugin_id)}</td><td>${WT.esc(x.name)}</td>
-      <td>${WT.sevBadge(x.severity)}</td><td class="small">${WT.esc(x.family)}</td><td class="text-end">${x.count}</td></tr>`).join('')
+  // Each finding opens its own page; with several instances that page lists them first.
+  const findTable = (f, base) => f.length ? f.map(x => {
+    const href = `${base}/finding/${encodeURIComponent(x.plugin_id)}`;
+    return `<tr><td class="mono"><a href="${href}">${WT.esc(x.plugin_id)}</a></td><td><a href="${href}">${WT.esc(x.name)}</a></td>
+      <td>${WT.sevBadge(x.severity)}</td><td class="small">${WT.esc(x.family)}</td>
+      <td class="text-end">${x.count > 1 ? `<a class="badge rounded-pill text-bg-primary text-decoration-none" href="${href}" title="Show the ${x.count} instances">${x.count}</a>` : x.count}</td></tr>`;
+  }).join('')
     : '<tr><td colspan="5" class="empty px-3">No findings (if the scan is still running, they arrive when it ends).</td></tr>';
 
   // ------------------------------------------------------------- list view
@@ -40,7 +45,7 @@
       $('#sdCards').html(card('Duration', WT.dur(res.scanDuration)) + card('Started', res.startTime > 0 ? new Date(res.startTime * 1000).toLocaleString('en-GB') : '–')
         + card('Import', WT.esc(res.importStatus || '–')) + card('Target / scanner', `<span class="small">${WT.esc(tg.join(', ') || '–')}</span>`));
       $('#sdNotes').html(notes.length ? `<div class="card mb-3"><div class="card-header">Scanner notes</div><div class="card-body small" style="white-space:pre-wrap">${WT.esc(notes.join('\n'))}</div></div>` : '');
-      $('#sdFind').html(findTable(r.findings));
+      $('#sdFind').html(findTable(r.findings, '/scan-results/sc/' + encodeURIComponent(scId)));
       const sev = {}; r.findings.forEach(f => { sev[f.severity] = (sev[f.severity] || 0) + 1; });
       const order = ['Critical', 'High', 'Medium', 'Low', 'Info'], colors = ['#1c2126', '#2f4a52', '#c98a2b', '#2f9c8b', '#9aa6ad'];
       new Chart($('#chSdSev')[0], {type: 'doughnut', data: {labels: order, datasets: [{data: order.map(k => sev[k] || 0), backgroundColor: colors}]},
@@ -71,7 +76,7 @@
       card('Log lines', `${lc.total || 0} <span class="small text-warning">W ${lc.warn || 0}</span> <span class="small text-danger">E ${lc.error || 0}</span>`),
       card('Findings', Object.entries(r.severity).map(([k, v]) => WT.sevBadge(k) + ' ' + v).join(' ') || '0'),
     ].join('') + `<div class="col-12 small text-body-secondary">Families: ${WT.esc((r.families || []).join(', ') || 'from policy')} · debug: ${WT.esc(r.debug_mode)} · fast scope: ${r.fast ? 'yes' : 'no'} · scanner UUID: <span class="mono">${WT.esc(r.scan_uuid || '–')}</span>${r.error ? ` · <span class="text-danger">${WT.esc(r.error)}</span>` : ''}</div>`);
-    $('#rdFind').html(findTable(r.findings || []));
+    $('#rdFind').html(findTable(r.findings || [], '/scan-results/' + runId));
     $('#rdEvents').html(r.events.map(e => `<div class="${e.level === 'error' ? 'text-danger' : e.level === 'warn' ? 'text-warning' : e.level === 'ok' ? 'text-success' : ''}">${new Date(e.ts).toLocaleTimeString('en-GB')} ${WT.esc(e.message)}</div>`).join('') || '<div class="empty">No events</div>');
     const ev = $('#rdEvents')[0]; ev.scrollTop = ev.scrollHeight;
     drawCharts(r.stats || []);
@@ -113,7 +118,7 @@
     setInterval(() => { if (run && run.active && !document.hidden) { loadDetail(); } }, 6000);
     $('#rlLoad').on('click', loadLog);
     $('#rlGrep').on('keydown', e => { if (e.key === 'Enter') loadLog(); });
-    $('#rlAi').on('click', () => { WT.chat.addAttach(`run #${runId} log · ${logLines.length} lines`, logLines.join('\n')); bootstrap.Offcanvas.getOrCreateInstance('#wtChat').show(); });
+    $('#rlAi').on('click', () => { WT.chat.addAttach(`run #${runId} log · ${logLines.length} lines`, logLines.join('\n')); WT.chat.open(); });
     $('#rdLive').on('click', () => { location.href = '/logs?uuid=' + encodeURIComponent(run.scan_uuid); });
     $('#rdFindings').on('click', () => WT.post(`/scans/${runId}/refresh-findings`).then(r => { WT.ok(r.findings.length + ' findings loaded'); loadDetail(); }).catch(e => WT.fail(e)));
     $('#rdCancel').on('click', () => { if (confirm('Cancel the run and stop the scan on Security Center?')) WT.post(`/scans/${runId}/cancel`).then(() => WT.ok('Cancel requested')).catch(e => WT.fail(e)); });

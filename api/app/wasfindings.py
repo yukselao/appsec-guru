@@ -78,3 +78,52 @@ def attachment_summary(sc, rid, findings, limit=6):
             except SCError:
                 continue
     return notes
+
+
+def _ts(v):
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
+def plugin_details(sc, rid, plugin_id, limit=500):
+    """Everything Security Center returns for one plugin in one scan result:
+    the plugin's reference data once, plus one entry per instance."""
+    q = {"type": "vuln", "sourceType": "individual", "scanID": str(rid), "view": "all",
+         "query": {"tool": "vulndetails", "type": "vuln", "startOffset": 0, "endOffset": limit,
+                   "filters": [{"filterName": "pluginID", "operator": "=", "value": str(plugin_id)}]}}
+    rows = sc.post("analysis", q).get("results", [])
+    if not rows:
+        return None
+    x = rows[0]
+    sev, fam = x.get("severity") or {}, x.get("family") or {}
+    plugin = {
+        "plugin_id": str(x.get("pluginID")), "name": x.get("pluginName") or x.get("name"),
+        "severity": sev.get("name"), "family": fam.get("name") if isinstance(fam, dict) else fam,
+        "synopsis": x.get("synopsis") or "", "description": x.get("description") or "",
+        "solution": x.get("solution") or "",
+        "see_also": [u for u in re.split(r"\s+", x.get("seeAlso") or "") if u],
+        "risk_factor": x.get("riskFactor") or "", "cve": [c for c in (x.get("cve") or "").split(",") if c],
+        "xref": [c.strip() for c in (x.get("xref") or "").split(",") if c.strip()],
+        "cvss": {k: x.get(k) for k in ("baseScore", "cvssVector", "cvssV3BaseScore", "cvssV3Vector",
+                                        "cvssV4BaseScore", "cvssV4Vector", "vprScore", "epssScore") if x.get(k)},
+        "exploit_available": x.get("exploitAvailable") or "", "check_type": x.get("checkType") or "",
+        "plugin_published": _ts(x.get("pluginPubDate")), "plugin_modified": _ts(x.get("pluginModDate")),
+    }
+    instances = []
+    for i, r in enumerate(rows, 1):
+        text = r.get("pluginText") or ""
+        out = "\n".join(PLUGIN_OUT_RX.findall(text)) or text
+        att = r.get("attachment") or r.get("attachments") or []
+        if isinstance(att, dict):
+            att = [att]
+        atts = [{"id": str(a.get("id") or a.get("attachmentID") or a.get("value")), "name": a.get("name") or a.get("type") or "attachment"}
+                for a in att if isinstance(a, dict) and (a.get("id") or a.get("attachmentID") or a.get("value"))] if isinstance(att, list) else []
+        instances.append({
+            "n": i, "vuln_uuid": r.get("vulnUUID") or "", "host": r.get("dnsName") or r.get("ip") or "",
+            "ip": r.get("ip") or "", "port": r.get("port") or "", "protocol": r.get("protocol") or "",
+            "urls": sorted(set(URL_RX.findall(out)))[:50], "output": out,
+            "first_seen": _ts(r.get("firstSeen")), "last_seen": _ts(r.get("lastSeen")), "attachments": atts})
+    return {"plugin": plugin, "instances": instances, "count": len(instances)}
