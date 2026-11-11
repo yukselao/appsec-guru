@@ -63,11 +63,11 @@
     const schedCls = !p.enabled || onDemand ? 'text-bg-light border' : 'sched-on';
     const accent = !p.enabled ? 'is-off' : (last && last.active ? 'is-running' : 'is-on');
     const lastCell = last
-      ? `<a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''}${last.findings ? ` · ${last.findings} findings` : ''}`
+      ? `<a href="/scan-results/${last.id}">#${last.id}</a> ${WT.statusBadge(last.status)}${last.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''}${last.findings ? ` · <a href="/scan-results/${last.id}">${last.findings} findings</a>` : ''}`
       : '<span class="text-body-secondary">—</span>';
     return `<tr class="scan-row ${accent}">
       <td><div class="d-flex align-items-center gap-2"><span class="fw-semibold text-truncate" style="max-width:220px" title="${WT.esc(p.name)}">${WT.esc(p.name)}</span>${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>${p.description ? `<div class="small text-body-secondary text-truncate" style="max-width:260px">${WT.esc(p.description)}</div>` : ''}</td>
-      <td><a class="mono small text-truncate d-inline-block" style="max-width:240px" href="/create-scan?target=${encodeURIComponent(p.target_url)}" title="${WT.esc(p.target_url)}">${WT.esc(p.target_url)}</a></td>
+      <td><span class="mono small text-truncate d-inline-block" style="max-width:240px" title="${WT.esc(p.target_url)}">${WT.esc(p.target_url)}</span></td>
       <td class="small">${WT.esc(p.source_policy_id)} <span class="text-body-secondary">· ${p.families.length ? p.families.length + ' families' : 'policy families'}</span></td>
       <td class="small">${WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode)}</td>
       <td><span class="badge rounded-pill ${schedCls} text-nowrap">${ICO.clock} ${WT.esc(p.schedule_text)}</span></td>
