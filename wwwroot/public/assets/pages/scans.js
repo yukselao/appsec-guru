@@ -1,6 +1,6 @@
 (function ($, WT) {
   'use strict';
-  const S = {folders: [], families: [], policies: [], sensors: [], repos: [], zones: [], creds: [], reports: [], folder: 'all', step: 1, editing: null};
+  const S = {scans: {}, folders: [], families: [], policies: [], sensors: [], repos: [], zones: [], creds: [], reports: [], folder: 'all', step: 1, editing: null};
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const STEPS = 5;
 
@@ -38,6 +38,7 @@
 
   function profiles() {
     WT.get('/tenable-was-scans?folder=' + S.folder).then(r => {
+      r.scans.forEach(p => { S.scans[p.id] = p; });
       $('#profCount').text(r.scans.length);
       const folderName = S.folder === 'all' ? 'All scans' : S.folder === 'unfiled' ? 'Unfiled scans'
         : (S.folders.find(f => f.id == S.folder) || {}).name || 'Scans';
@@ -73,7 +74,7 @@
   function scanPrefs() {
     if ($('#pmScope').val() !== 'custom') return [];
     return ['was[scope]page_limit=' + ($('#pmPages').val() || 10),
-      'was_timeout=' + ($('#pmTime').val() || '00:30:00'),
+      'was_timeout=' + ($('#pmScopeTime').val() || '00:30:00'),
       'was[plugin][rate_limiter]requests_per_second=' + ($('#pmRps').val() || 25)];
   }
 
@@ -124,8 +125,8 @@
     let h = '';
     if (t === 'once') h = `<label class="form-label" for="pmAt">At</label><input class="form-control" id="pmAt" type="datetime-local" value="${now}">`;
     else if (t === 'interval') h = `<label class="form-label" for="pmEvery">Every (hours)</label><input class="form-control" id="pmEvery" type="number" value="6" min="1">`;
-    else if (t === 'daily') h = `<label class="form-label" for="pmTime">Time</label><input class="form-control" id="pmTime" type="time" value="02:30">`;
-    else if (t === 'weekly') h = `<label class="form-label" for="pmTime">Time</label><input class="form-control mb-2" id="pmTime" type="time" value="02:30">
+    else if (t === 'daily') h = `<label class="form-label" for="pmSchedTime">Time</label><input class="form-control" id="pmSchedTime" type="time" value="02:30">`;
+    else if (t === 'weekly') h = `<label class="form-label" for="pmSchedTime">Time</label><input class="form-control mb-2" id="pmSchedTime" type="time" value="02:30">
       <div class="btn-group btn-group-sm d-flex flex-wrap" role="group">${DAYS.map((d, i) => `<input type="checkbox" class="btn-check pmDay" id="d${i}" value="${i}"><label class="btn btn-outline-secondary" for="d${i}">${d}</label>`).join('')}</div>`;
     $('#pmSchedFields').html(h);
     schedPreview();
@@ -134,8 +135,8 @@
     const t = $('#pmSchedType').val();
     if (t === 'once') return {type: 'once', at: $('#pmAt').val()};
     if (t === 'interval') return {type: 'interval', every_hours: parseFloat($('#pmEvery').val() || '6')};
-    if (t === 'daily') return {type: 'daily', time: $('#pmTime').val()};
-    if (t === 'weekly') return {type: 'weekly', time: $('#pmTime').val(), days: $('.pmDay:checked').map((i, el) => parseInt(el.value, 10)).get()};
+    if (t === 'daily') return {type: 'daily', time: $('#pmSchedTime').val()};
+    if (t === 'weekly') return {type: 'weekly', time: $('#pmSchedTime').val(), days: $('.pmDay:checked').map((i, el) => parseInt(el.value, 10)).get()};
     return {type: 'on_demand'};
   }
   function schedPreview() {
@@ -203,7 +204,7 @@
     if (d.scope === 'custom') {
       const pf = {}; (d.prefs || []).forEach(x => { const i = x.indexOf('='); if (i > 0) pf[x.slice(0, i)] = x.slice(i + 1); });
       if (pf['was[scope]page_limit']) $('#pmPages').val(pf['was[scope]page_limit']);
-      if (pf['was_timeout']) $('#pmTime').val(pf['was_timeout']);
+      if (pf['was_timeout']) $('#pmScopeTime').val(pf['was_timeout']);
       if (pf['was[plugin][rate_limiter]requests_per_second']) $('#pmRps').val(pf['was[plugin][rate_limiter]requests_per_second']);
     }
     $('#pmKeep').prop('checked', d.keep_objects !== false); $('#pmRepo').val(d.repo_id || ''); $('#pmZone').val(d.zone_id || '');
@@ -219,7 +220,7 @@
     $('#pmSchedType').val(sch.type || 'on_demand'); schedFields();
     if (sch.type === 'once') $('#pmAt').val(sch.at);
     if (sch.type === 'interval') $('#pmEvery').val(sch.every_hours);
-    if (sch.time) $('#pmTime').val(sch.time);
+    if (sch.time) $('#pmSchedTime').val(sch.time);
     (sch.days || []).forEach(i => $('#d' + i).prop('checked', true));
     schedPreview();
     goStep(1);
@@ -250,10 +251,17 @@
   $(document).on('click', '[data-folder]', function () { S.folder = $(this).data('folder'); tree(); });
   $('#newFolder').on('click', () => { const n = prompt('Folder name'); if (n) WT.post('/folders', {name: n}).then(() => { WT.ok('Folder created'); tree(); }).catch(e => WT.fail(e)); });
   $(document).on('click', '[data-ren]', function (e) { e.preventDefault(); e.stopPropagation(); const id = $(this).data('ren'); const n = prompt('New name'); if (n) WT.api('PUT', '/folders/' + id, {name: n}).then(() => tree()).catch(x => WT.fail(x)); });
-  $(document).on('click', '[data-delf]', function (e) { e.preventDefault(); e.stopPropagation(); const id = $(this).data('delf'); if (confirm('Delete folder? Profiles inside move to Unfiled.')) WT.api('DELETE', '/folders/' + id).then(() => { S.folder = 'all'; tree(); }).catch(x => WT.fail(x)); });
-  $('#newProfile, #profCards').on('click', '#newProfile, #emptyNew', e => { e.preventDefault(); openWizard(null); });
+  $(document).on('click', '[data-delf]', function (e) { e.preventDefault(); e.stopPropagation(); const id = $(this).data('delf'); if (confirm('Delete folder? Scans inside move to Unfiled.')) WT.api('DELETE', '/folders/' + id).then(() => { S.folder = 'all'; tree(); }).catch(x => WT.fail(x)); });
   $('#newProfile').on('click', () => openWizard(null));
-  $(document).on('click', '[data-edit]', function () { WT.get('/tenable-was-scans/' + $(this).data('edit')).then(openWizard).catch(e => WT.fail(e)); });
+  $('#profCards').on('click', '#emptyNew', () => openWizard(null));
+  // Edit opens straight from the row already on screen; the API is only a fallback.
+  $(document).on('click', '[data-edit]', function (e) {
+    e.preventDefault();
+    const id = $(this).data('edit'), cached = S.scans[id];
+    const open = p => { try { openWizard(p); } catch (err) { console.error(err); WT.fail('Could not open the editor: ' + err.message); } };
+    if (cached) { open(cached); return; }
+    WT.get('/tenable-was-scans/' + id).then(open).catch(x => WT.fail(x));
+  });
   $(document).on('click', '[data-run]', function () {
     const id = $(this).data('run');
     WT.post('/tenable-was-scans/' + id + '/run').then(r => { WT.ok('Run #' + r.run_id + ' started'); location.href = '/scan-results/' + r.run_id; }).catch(e => WT.fail(e));
@@ -290,7 +298,7 @@
     req.then(r => { WT.ok('Scan saved'); bootstrap.Modal.getInstance('#profModal').hide();
       if (r.run_id) { location.href = '/scan-results/' + r.run_id; return; } tree(); }).catch(e => WT.fail(e));
   });
-  $('#refreshProf').on('click', tree);
+  $('#refreshProf').on('click', () => { tree(); miniRunning(); });
   $('#profSearch').on('input', profiles);
 
   $.when(WT.get('/sc/families'), WT.get('/sc/policies'), WT.get('/sensors'), WT.get('/sc/repos'), WT.get('/sc/zones'),
@@ -299,6 +307,5 @@
     S.repos = r[0].repos || []; S.zones = z[0].zones || [];
     S.creds = c[0].credentials || []; S.reports = rp[0].reports || []; tree();
   }).catch(e => WT.fail(e, 'Could not load scan references'));
-  miniRunning();
-  setInterval(() => { if (!document.hidden) miniRunning(); }, 5000);
+  miniRunning();   // no timer: the page loads once and again only on Refresh
 })(jQuery, window.WT);
