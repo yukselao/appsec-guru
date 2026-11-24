@@ -121,6 +121,8 @@ services:
       RECON_SQLMAP_RETRIES: ${recon_sqlmap_retries:-}
       RECON_SQLMAP_STAGE_TIMEOUT: ${recon_sqlmap_stage_timeout:-}
       RECON_COMMIX_LEVEL: ${recon_commix_level:-}
+      RECON_COMMIX_TIMEOUT: ${recon_commix_timeout:-}
+      RECON_COMMIX_RETRIES: ${recon_commix_retries:-}
       RECON_COMMIX_STAGE_TIMEOUT: ${recon_commix_stage_timeout:-}
     volumes:
       - ./api:/app:ro

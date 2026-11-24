@@ -73,6 +73,8 @@ FIELDS = {
     "recon.sqlmap_retries": ("2", False, "RECON_SQLMAP_RETRIES"),
     "recon.sqlmap_stage_timeout": ("1800", False, "RECON_SQLMAP_STAGE_TIMEOUT"),
     "recon.commix_level": ("1", False, "RECON_COMMIX_LEVEL"),
+    "recon.commix_timeout": ("30", False, "RECON_COMMIX_TIMEOUT"),
+    "recon.commix_retries": ("3", False, "RECON_COMMIX_RETRIES"),
     "recon.commix_stage_timeout": ("1800", False, "RECON_COMMIX_STAGE_TIMEOUT"),
 }
 # key -> (min, max) of whole-number settings; checked on save and clamped on use
@@ -105,6 +107,8 @@ INT_LIMITS = {
     "recon.sqlmap_retries": (0, 5),
     "recon.sqlmap_stage_timeout": (60, 7200),
     "recon.commix_level": (1, 3),
+    "recon.commix_timeout": (1, 120),
+    "recon.commix_retries": (0, 5),
     "recon.commix_stage_timeout": (60, 7200),
 }
 SECRET_MASK = "__SET__"

@@ -1,41 +1,85 @@
 {% extends 'base.html.twig' %}
 {% block content %}
 <div class="row g-3">
-  <div class="col-xl-4">
+  <div class="col-xl-5">
     <div class="card mb-3">
-      <div class="card-header">New Commix scan</div>
+      <div class="card-header d-flex align-items-center">New Commix Assessment
+        <span class="small text-body-secondary ms-auto">OS command-injection detection</span></div>
       <div class="card-body">
-        <p class="small text-body-secondary">OS command-injection detection with <b>Commix</b>, in its own container. Detection only. Lab use only &mdash; test hosts you are authorised to.</p>
+        <p class="small text-body-secondary">Detection mode only &mdash; no command execution or file access. Lab use only, test hosts you are authorised to.</p>
         <form id="cxForm">
           <label class="form-label" for="cxTarget">Target URL</label>
           <input class="form-control mb-2" id="cxTarget" placeholder="http://192.168.1.140/vulnerabilities/exec/?ip=1">
-          <label class="form-label" for="cxData">POST data <span class="small text-body-secondary">(optional)</span></label>
-          <input class="form-control mb-2 mono" id="cxData" placeholder="ip=127.0.0.1&amp;Submit=Submit">
-          <label class="form-label" for="cxCookie">Cookie <span class="small text-body-secondary">(optional)</span></label>
-          <input class="form-control mb-2 mono" id="cxCookie" placeholder="PHPSESSID=...; security=low">
-          <div class="row g-2">
-            <div class="col-6"><label class="form-label" for="cxLevel">Level</label>
-              <select class="form-select" id="cxLevel"><option value="">default</option>{% for n in 1..3 %}<option>{{ n }}</option>{% endfor %}</select></div>
-            <div class="col-6"><label class="form-label" for="cxTech">Technique</label><input class="form-control" id="cxTech" placeholder="ct" maxlength="5"></div>
+          <label class="form-label small" for="cxData">Request body <span class="mono text-body-secondary">--data</span></label>
+          <input class="form-control form-control-sm mb-2 mono" id="cxData" placeholder="ip=127.0.0.1&amp;Submit=Submit">
+          <label class="form-label small" for="cxCookie">Cookie <span class="mono text-body-secondary">--cookie</span></label>
+          <input class="form-control form-control-sm mb-2 mono" id="cxCookie" placeholder="PHPSESSID=...; security=low">
+          <label class="form-label small" for="cxHeaders">Custom headers <span class="mono text-body-secondary">-H</span> <span class="text-body-secondary">(one per line)</span></label>
+          <textarea class="form-control form-control-sm mb-3 mono" id="cxHeaders" rows="2" placeholder="X-Forwarded-For: 127.0.0.1"></textarea>
+
+          <label class="form-label mb-1">Scan Profile</label>
+          <div class="btn-group w-100 mb-3" role="group">
+            <input type="radio" class="btn-check" name="cxProfile" id="cp-quick" value="quick" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="cp-quick">Quick Detection</label>
+            <input type="radio" class="btn-check" name="cxProfile" id="cp-standard" value="standard" autocomplete="off" checked>
+            <label class="btn btn-outline-secondary" for="cp-standard">Standard Assessment</label>
           </div>
-          <div class="form-text mt-2 mb-3">Level default &amp; limits: <a href="/settings">Settings</a> &rarr; Commix. Technique letters: c,t,f,e,w (classic/time/file/eval/tempfile).</div>
-          <button class="btn btn-primary w-100" type="submit" id="cxGo">Start scan</button>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label small" for="cxLevel">Level <span class="mono text-body-secondary">--level</span></label>
+              <select class="form-select form-select-sm" id="cxLevel">{% for n in 1..3 %}<option>{{ n }}</option>{% endfor %}</select></div>
+          </div>
+
+          <label class="form-label mb-1">Detection Techniques <span class="mono small text-body-secondary">--technique</span></label>
+          <div class="row row-cols-1 g-1 mb-3" id="cxTech">
+            {% for t in [
+              {'k':'r','n':'Results-based','d':'Command output returned directly in the response.'},
+              {'k':'b','n':'Boolean-based','d':'True/false inference from responses.'},
+              {'k':'t','n':'Time-based Blind','d':'Inference from response delays.'},
+              {'k':'f','n':'File-based Semiblind','d':'Output written to a file served by the app.'}] %}
+            <div class="col"><div class="form-check">
+              <input class="form-check-input cxTech" type="checkbox" value="{{ t.k }}" id="ct-{{ t.k }}">
+              <label class="form-check-label small" for="ct-{{ t.k }}"><span class="badge text-bg-dark text-uppercase">{{ t.k }}</span> {{ t.n }}<div class="text-body-secondary">{{ t.d }}</div></label>
+            </div></div>
+            {% endfor %}
+          </div>
+
+          <div class="accordion accordion-flush mb-3" id="cxAdvAcc">
+            <div class="accordion-item">
+              <h3 class="accordion-header"><button class="accordion-button collapsed px-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cxAdv">Advanced &amp; Session Settings</button></h3>
+              <div id="cxAdv" class="accordion-collapse collapse" data-bs-parent="#cxAdvAcc"><div class="accordion-body px-0">
+                <div class="row g-2">
+                  <div class="col-6 col-md-4"><label class="form-label small" for="cxTo">Timeout (s)</label><input class="form-control form-control-sm" id="cxTo" type="number" min="1" max="120" value="30"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="cxDelay">Delay (s)</label><input class="form-control form-control-sm" id="cxDelay" type="number" min="0" max="10" step="0.5" value="0"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="cxRetries">Retries</label><input class="form-control form-control-sm" id="cxRetries" type="number" min="0" max="5" value="3"></div>
+                  <div class="col-12"><label class="form-label small" for="cxProxy">Proxy <span class="mono text-body-secondary">--proxy</span></label><input class="form-control form-control-sm mono" id="cxProxy" placeholder="http://127.0.0.1:8080"></div>
+                  <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="cxFlush"><label class="form-check-label" for="cxFlush">Fresh session <span class="mono small text-body-secondary">--flush-session</span></label></div></div>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">Generated CLI Command</span>
+            <button type="button" class="btn btn-sm btn-link ms-auto py-0" id="cxCopy">Copy</button></div>
+          <pre class="code small p-2 mb-3" id="cxCli" style="white-space:pre-wrap;word-break:break-all"></pre>
+
+          <button class="btn btn-primary w-100" type="submit" id="cxGo">Start Commix Assessment</button>
         </form>
       </div>
     </div>
     <div class="card">
       <div class="card-header d-flex align-items-center">History <span class="badge text-bg-light border ms-2" id="cxRunsCount"></span></div>
-      <div class="card-body p-0" style="max-height:60vh;overflow:auto"><ul class="list-group list-group-flush small" id="cxRuns"></ul></div>
+      <div class="card-body p-0" style="max-height:40vh;overflow:auto"><ul class="list-group list-group-flush small" id="cxRuns"></ul></div>
     </div>
   </div>
-  <div class="col-xl-8">
+  <div class="col-xl-7">
     <div class="card">
       <div class="card-header d-flex align-items-center">Result <span id="cxState" class="ms-2"></span>
         <a href="#" class="small ms-2 d-none" id="cxLogOpen">Live log &#8599;</a>
         <div class="ms-auto d-flex gap-2"><button class="btn btn-sm btn-outline-danger" id="cxCancel" disabled>Cancel</button></div>
       </div>
       <div class="card-body">
-        <div id="cxSummary"><div class="empty">Start a scan to see command-injection findings.</div></div>
+        <div id="cxSummary"><div class="empty">Start an assessment to see command-injection findings.</div></div>
       </div>
     </div>
   </div>

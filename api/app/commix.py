@@ -20,7 +20,9 @@ log = logging.getLogger("commix")
 COMMIX = os.environ.get("RECON_COMMIX", "recon-commix:7008")
 URL_RX = re.compile(r"^https?://[\w.\-]+(:\d+)?(/[^\s]*)?$", re.I)
 ANSI_RX = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
-TECH_RX = re.compile(r"^[ctfew]{1,5}$", re.I)
+TECH_RX = re.compile(r"^[rbtf]{1,4}$", re.I)   # results/boolean/time/file-based
+HEADER_RX = re.compile(r"^[A-Za-z0-9\-]+:\s?.+$")
+PROXY_RX = re.compile(r"^(https?|socks[45])://[\w.\-]+:\d{1,5}$", re.I)
 LOG_MAX = 6000
 LOG_RUNS = 25
 _active = {}
@@ -102,16 +104,24 @@ def _clean_url(raw):
     return u
 
 
-def _argv(url, opts):
+def _argv(url, o):
     """Whole commix argv. Detection only - NEVER emits --os-shell, --os-cmd,
     --os-pwn or file flags. --batch is forced by the container."""
-    argv = ["-u", url, "--level", str(opts["level"])]
-    if opts.get("data"):
-        argv += ["--data", opts["data"]]
-    if opts.get("cookie"):
-        argv += ["--cookie", opts["cookie"]]
-    if opts.get("technique"):
-        argv += ["--technique", opts["technique"]]
+    argv = ["-u", url, "--level", str(o["level"]), "--timeout", str(o["timeout"]), "--retries", str(o["retries"])]
+    if o.get("data"):
+        argv += ["--data", o["data"]]
+    if o.get("cookie"):
+        argv += ["--cookie", o["cookie"]]
+    for h in o.get("headers") or []:
+        argv += ["-H", h]
+    if o.get("technique"):
+        argv += ["--technique", o["technique"]]
+    if o.get("delay"):
+        argv += ["--delay", str(o["delay"])]
+    if o.get("proxy"):
+        argv += ["--proxy", o["proxy"]]
+    if o.get("flush_session"):
+        argv += ["--flush-session"]
     return argv
 
 
@@ -119,15 +129,40 @@ def start(params, client_ip=None):
     url = _clean_url(params.get("target"))
     tech = (params.get("technique") or "").strip().lower()
     if tech and not TECH_RX.match(tech):
-        raise ValueError("technique must be letters from ctfew (classic/time/file/eval/tempfile)")
+        raise ValueError("technique must be letters from rbtf (results/boolean/time/file-based)")
     data = (params.get("data") or "").strip()
     cookie = (params.get("cookie") or "").strip()
     for name, val in (("data", data), ("cookie", cookie)):
         if "\n" in val or "\r" in val:
             raise ValueError("{} must be a single line".format(name))
+    headers = []
+    for line in (params.get("headers") or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if not HEADER_RX.match(line):
+            raise ValueError("headers must be 'Name: value', one per line")
+        headers.append(line)
+    proxy = (params.get("proxy") or "").strip()
+    if proxy and not PROXY_RX.match(proxy):
+        raise ValueError("proxy must look like http://host:8080 or socks5://host:1080")
+    delay = (params.get("delay") or "").strip()
+    if delay:
+        try:
+            delay = float(delay)
+        except ValueError:
+            delay = -1
+        if delay < 0 or delay > 10:
+            raise ValueError("delay must be 0 to 10 seconds")
+    else:
+        delay = 0
     opts = {"level": st.get_int("recon.commix_level", _ov(params, "level", "recon.commix_level")),
+            "timeout": st.get_int("recon.commix_timeout", _ov(params, "timeout", "recon.commix_timeout")),
+            "retries": st.get_int("recon.commix_retries", _ov(params, "retries", "recon.commix_retries")),
             "stage_timeout": st.get_int("recon.commix_stage_timeout"),
-            "data": data, "cookie": cookie, "technique": tech}
+            "data": data, "cookie": cookie, "headers": headers, "technique": tech,
+            "delay": delay, "proxy": proxy, "flush_session": bool(params.get("flush_session")),
+            "profile": (params.get("profile") or "")[:20]}
     with session_scope() as s:
         r = CommixRun(target=url, status="pending", options=opts)
         s.add(r)
@@ -150,7 +185,7 @@ def _ov(params, key, setting_key):
 
 def _run(run_id, url, opts, cancel_ev):
     argv = _argv(url, opts)
-    shown = [a if not (i and argv[i - 1] in ("--cookie", "--data")) else "***" for i, a in enumerate(argv)]
+    shown = [a if not (i and argv[i - 1] in ("--cookie", "--data", "-H")) else "***" for i, a in enumerate(argv)]
     st_ = {"vulnerable": False, "os": "", "injections": []}
     saw_error = []
     _log_append(run_id, "$ commix " + " ".join(shown))
@@ -250,6 +285,8 @@ def _safe_opts(opts):
     for k in ("cookie", "data"):
         if o.get(k):
             o[k] = "***"
+    if o.get("headers"):
+        o["headers"] = ["***"] * len(o["headers"])
     return o
 
 
