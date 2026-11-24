@@ -76,6 +76,8 @@ FIELDS = {
     "recon.commix_timeout": ("30", False, "RECON_COMMIX_TIMEOUT"),
     "recon.commix_retries": ("3", False, "RECON_COMMIX_RETRIES"),
     "recon.commix_stage_timeout": ("1800", False, "RECON_COMMIX_STAGE_TIMEOUT"),
+    "recon.trivy_timeout": ("10", False, "RECON_TRIVY_TIMEOUT"),
+    "recon.trivy_stage_timeout": ("900", False, "RECON_TRIVY_STAGE_TIMEOUT"),
 }
 # key -> (min, max) of whole-number settings; checked on save and clamped on use
 INT_LIMITS = {
@@ -110,6 +112,8 @@ INT_LIMITS = {
     "recon.commix_timeout": (1, 120),
     "recon.commix_retries": (0, 5),
     "recon.commix_stage_timeout": (60, 7200),
+    "recon.trivy_timeout": (1, 60),
+    "recon.trivy_stage_timeout": (60, 3600),
 }
 SECRET_MASK = "__SET__"
 

@@ -328,3 +328,18 @@ class CommixRun(Base):
     stats = Column(JSONB, nullable=False, server_default="{}")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     finished_at = Column(DateTime(timezone=True))
+
+
+class TrivyScan(Base):
+    """A Trivy scan of a container image (vulnerabilities, secrets, misconfig, SBOM)."""
+    __tablename__ = "trivy_scans"
+    id = Column(Integer, primary_key=True)
+    target = Column(Text, nullable=False)          # image reference
+    digest = Column(String(120))                   # resolved image digest, when available
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="{}")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))

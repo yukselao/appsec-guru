@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <div class="text-body-secondary small">Container image security posture &mdash; every number is from stored Trivy scans.</div>
+  <div class="ms-auto d-flex gap-2"><button class="btn btn-sm btn-outline-secondary" id="coRefresh">Refresh</button>
+    <a class="btn btn-sm btn-primary" href="/trivy-scan">New Trivy Scan</a></div>
+</div>
+
+<div class="row g-2 mb-3" id="coCards"></div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="card h-100"><div class="card-header">Most vulnerable images</div>
+      <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+        <thead><tr><th>Image</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Total</th></tr></thead>
+        <tbody id="coImages"><tr><td colspan="6" class="empty px-3">No scans yet.</td></tr></tbody>
+      </table></div></div></div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100"><div class="card-header">Most frequent CVEs</div>
+      <div class="card-body p-0"><ul class="list-group list-group-flush small" id="coCves"></ul></div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3"><div class="card-header d-flex align-items-center">Recent scans<a class="ms-auto small" href="/trivy-scan">All scans</a></div>
+  <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+    <thead><tr><th>#</th><th>Image</th><th>Status</th><th>Vulns</th><th>Secrets</th><th>Misconfig</th><th>When</th></tr></thead>
+    <tbody id="coRecent"></tbody>
+  </table></div></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/container-overview.js') }}"></script>{% endblock %}

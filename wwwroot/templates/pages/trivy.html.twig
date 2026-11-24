@@ -1,0 +1,100 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">New Trivy Scan
+        <span class="small text-body-secondary ms-auto">Aqua Trivy</span></div>
+      <div class="card-body">
+        <p class="small text-body-secondary">Container image vulnerability, secret &amp; misconfiguration scanning. Trivy pulls the image by reference &mdash; no Docker socket is used.</p>
+        <form id="tvForm">
+          <label class="form-label" for="tvTarget">Image reference</label>
+          <input class="form-control mb-3 mono" id="tvTarget" placeholder="alpine:3.19 or registry/repo:tag@sha256:...">
+
+          <label class="form-label" for="tvProfile">Scan Profile</label>
+          <select class="form-select mb-3" id="tvProfile">
+            <option value="quick">Quick Vulnerability Scan</option>
+            <option value="full" selected>Full Vulnerability Assessment</option>
+            <option value="misconfig">Misconfiguration Assessment</option>
+            <option value="secret">Secret Detection</option>
+            <option value="sbom">SBOM Generation</option>
+            <option value="comprehensive">Comprehensive Assessment</option>
+            <option value="custom">Custom</option>
+          </select>
+
+          <label class="form-label mb-1">Scanners</label>
+          <div class="d-flex flex-wrap gap-2 mb-3" id="tvScanners">
+            {% for s in {'vuln':'Vulnerabilities','secret':'Secrets','misconfig':'Misconfigurations','license':'License'} %}{% endfor %}
+            <div class="form-check"><input class="form-check-input tvScan" type="checkbox" value="vuln" id="tsc-vuln" checked><label class="form-check-label small" for="tsc-vuln">Vulnerabilities</label></div>
+            <div class="form-check"><input class="form-check-input tvScan" type="checkbox" value="secret" id="tsc-secret"><label class="form-check-label small" for="tsc-secret">Secrets</label></div>
+            <div class="form-check"><input class="form-check-input tvScan" type="checkbox" value="misconfig" id="tsc-misconfig"><label class="form-check-label small" for="tsc-misconfig">Misconfigurations</label></div>
+            <div class="form-check"><input class="form-check-input tvScan" type="checkbox" value="license" id="tsc-license"><label class="form-check-label small" for="tsc-license">License</label></div>
+          </div>
+
+          <label class="form-label mb-1">Severity <span class="small text-body-secondary">(empty = all)</span></label>
+          <div class="d-flex flex-wrap gap-2 mb-3" id="tvSev">
+            {% for s in ['CRITICAL','HIGH','MEDIUM','LOW','UNKNOWN'] %}
+            <div class="form-check"><input class="form-check-input tvSev" type="checkbox" value="{{ s }}" id="tsv-{{ s }}"><label class="form-check-label small text-capitalize" for="tsv-{{ s }}">{{ s|lower }}</label></div>
+            {% endfor %}
+          </div>
+
+          <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" id="tvIgnoreUnfixed"><label class="form-check-label" for="tvIgnoreUnfixed">Ignore unfixed vulnerabilities <span class="mono small text-body-secondary">--ignore-unfixed</span></label></div>
+          <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="tvAllPkgs"><label class="form-check-label" for="tvAllPkgs">Full package inventory / SBOM <span class="mono small text-body-secondary">--list-all-pkgs</span></label></div>
+
+          <div class="accordion accordion-flush mb-3" id="tvAdvAcc">
+            <div class="accordion-item">
+              <h3 class="accordion-header"><button class="accordion-button collapsed px-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#tvAdv">Advanced Settings</button></h3>
+              <div id="tvAdv" class="accordion-collapse collapse" data-bs-parent="#tvAdvAcc"><div class="accordion-body px-0">
+                <div class="row g-2">
+                  <div class="col-6"><label class="form-label small" for="tvTo">Timeout (min) <span class="mono text-body-secondary">--timeout</span></label><input class="form-control form-control-sm" id="tvTo" type="number" min="1" max="60" value="10"></div>
+                </div>
+                <div class="alert alert-light border small mt-2 mb-0">The vulnerability DB is baked into the image (offline). Scanning an image pulls it from its registry.</div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">Generated CLI Command</span>
+            <button type="button" class="btn btn-sm btn-link ms-auto py-0" id="tvCopy">Copy</button></div>
+          <pre class="code small p-2 mb-3" id="tvCli" style="white-space:pre-wrap;word-break:break-all"></pre>
+
+          <button class="btn btn-primary w-100" type="submit" id="tvGo">Start Trivy Scan</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Scan History <span class="badge text-bg-light border ms-2" id="tvRunsCount"></span></div>
+      <div class="card-body p-0" style="max-height:45vh;overflow:auto"><ul class="list-group list-group-flush small" id="tvRuns"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Result <span id="tvState" class="ms-2"></span>
+        <span class="mono small text-body-secondary ms-2" id="tvImage"></span>
+        <a href="#" class="small ms-2 d-none" id="tvLogOpen">Log &#8599;</a>
+        <div class="ms-auto d-flex gap-2"><input class="form-control form-control-sm" style="max-width:180px" id="tvSearch" placeholder="filter">
+          <button class="btn btn-sm btn-outline-secondary" id="tvExport" disabled>Export JSON</button>
+          <button class="btn btn-sm btn-outline-danger" id="tvCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3" id="tvCards"></div>
+        <ul class="nav nav-tabs mb-2" id="tvTabs">
+          <li class="nav-item"><button class="nav-link active" data-tab="vuln" type="button">Vulnerabilities <span class="badge text-bg-secondary" id="tvcVuln">0</span></button></li>
+          <li class="nav-item"><button class="nav-link" data-tab="secret" type="button">Secrets <span class="badge text-bg-secondary" id="tvcSecret">0</span></button></li>
+          <li class="nav-item"><button class="nav-link" data-tab="misconfig" type="button">Misconfig <span class="badge text-bg-secondary" id="tvcMis">0</span></button></li>
+          <li class="nav-item"><button class="nav-link" data-tab="pkg" type="button">Packages <span class="badge text-bg-secondary" id="tvcPkg">0</span></button></li>
+        </ul>
+        <div class="table-responsive" style="max-height:60vh;overflow:auto"><div id="tvTable"><div class="empty">Start a scan to see results.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="tvLogModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Trivy log <span class="mono small text-body-secondary ms-1" id="tvLogTitle"></span></h5>
+    <span class="badge text-bg-secondary ms-2" id="tvLogState">idle</span>
+    <div class="form-check form-switch ms-auto me-2 mb-0"><input class="form-check-input" type="checkbox" id="tvLogScroll" checked><label class="form-check-label small" for="tvLogScroll">Follow</label></div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body p-0"><pre class="oss-log code mb-0 p-3" id="tvLogView" style="min-height:50vh;max-height:70vh;overflow:auto"></pre></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/trivy.js') }}"></script>{% endblock %}

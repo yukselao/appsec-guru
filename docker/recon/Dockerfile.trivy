@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+# Trivy (container image vulnerability / secret / misconfiguration scanning) over
+# the standard TCP line protocol (socat). The vulnerability DB is baked in at
+# build time for deterministic, offline scans. Pinned version. Apache-2.0; the
+# upstream NOTICE/LICENSE ship inside the base image.
+FROM aquasec/trivy:0.58.1
+USER root
+RUN apk add --no-cache socat
+# Bake the vulnerability DB into the image (offline, deterministic at run time).
+RUN trivy image --download-db-only --cache-dir /root/.cache/trivy
+COPY run-trivy.sh /usr/local/bin/run.sh
+COPY serve-trivy.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+ENTRYPOINT ["/usr/local/bin/serve.sh"]

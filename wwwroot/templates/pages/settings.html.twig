@@ -26,6 +26,7 @@
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tKatana" type="button">Katana</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tSqlmap" type="button">SQLMap</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tCommix" type="button">Commix</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tTrivy" type="button">Trivy</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAudit" type="button" id="tAuditBtn">Audit</button></li>
 </ul>
 <div class="tab-content">
@@ -144,6 +145,16 @@
     <div class="alert alert-light border small">Technique, request body, headers and session options are chosen per run in the Commix modal. Commix runs in detection mode only.</div>
     <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="commix">Save</button>
       <button class="btn btn-outline-warning ms-auto" data-reset="commix">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tTrivy" data-section="trivy">
+    <div class="card mb-3"><div class="card-header">Trivy defaults &amp; limits</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.trivy_timeout', 'Scan timeout (min)', 'number', 'Per-scan timeout passed to Trivy. Default 10, 1 to 60.', 'col-md-6', 1, 60) }}
+      {{ f.field('recon.trivy_stage_timeout', 'Hard time limit (s)', 'number', 'Socket safety deadline. Default 900, 60 to 3600.', 'col-md-6', 60, 3600) }}
+    </div></div></div>
+    <div class="alert alert-light border small">Pinned Trivy 0.58.1. The vulnerability database is baked into the container image for offline, deterministic scans. Scanners, severity and profile are chosen per scan in the Trivy modal.</div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="trivy">Save</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="trivy">Revert to .env</button></div>
   </div>
 
   <div class="tab-pane fade" id="tAudit">
