@@ -1,5 +1,5 @@
 """Tables. Schema changes go through a new Alembic revision in alembic/versions."""
-from sqlalchemy import (BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, LargeBinary, Numeric,
+from sqlalchemy import (BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, LargeBinary, Numeric, Float,
                         String, Text, func)
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -338,6 +338,22 @@ class TrivyScan(Base):
     digest = Column(String(120))                   # resolved image digest, when available
     status = Column(String(20), nullable=False, server_default="pending")
     error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="{}")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
+
+
+class KubescapeScan(Base):
+    """A Kubescape scan of Kubernetes manifests / Helm output against compliance
+    frameworks (NSA, MITRE, CIS...). Manifest mode needs no cluster access."""
+    __tablename__ = "kubescape_scans"
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)            # user label for the manifest / source
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    score = Column(Float)                          # overall compliance score (0-100)
     options = Column(JSONB, nullable=False, server_default="{}")
     results = Column(JSONB, nullable=False, server_default="{}")
     stats = Column(JSONB, nullable=False, server_default="{}")

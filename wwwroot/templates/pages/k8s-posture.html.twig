@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <div class="text-body-secondary small">Kubernetes compliance posture from Kubescape manifest scans.</div>
+  <div class="ms-auto d-flex gap-2"><button class="btn btn-sm btn-outline-secondary" id="kpRefresh">Refresh</button>
+    <a class="btn btn-sm btn-primary" href="/kubescape">New Manifest Scan</a></div>
+</div>
+
+<div class="row g-2 mb-3" id="kpCards"></div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="card h-100"><div class="card-header">Most frequent failing controls</div>
+      <div class="card-body p-0"><ul class="list-group list-group-flush small" id="kpControls"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100"><div class="card-header d-flex align-items-center">Recent scans<a class="ms-auto small" href="/kubescape">All</a></div>
+      <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+        <thead><tr><th>#</th><th>Label</th><th>Score</th><th>Failed</th><th>When</th></tr></thead>
+        <tbody id="kpRecent"></tbody>
+      </table></div></div></div>
+  </div>
+</div>
+
+<div class="alert alert-light border small mt-3 mb-0">
+  <b>Live cluster posture &amp; RBAC analysis</b> (scanning a running cluster, workload-to-image correlation and kube-bench CIS node benchmarks) requires a registered Kubernetes cluster or an in-cluster sensor. Manifest, Helm and IaC scanning above runs fully offline and needs no cluster.
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/k8s-posture.js') }}"></script>{% endblock %}

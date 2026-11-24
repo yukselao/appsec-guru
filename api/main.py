@@ -15,14 +15,14 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
-from app import nuclei, katana, sqlmap, commix, trivy
+from app import nuclei, katana, sqlmap, commix, trivy, kubescape
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, KubescapeScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -54,6 +54,7 @@ try:
     sqlmap.mark_orphans()
     commix.mark_orphans()
     trivy.mark_orphans()
+    kubescape.mark_orphans()
     runs.resume_orphans()
     sast.mark_orphans()
     was_scan.start_scheduler()
@@ -1385,6 +1386,57 @@ def trivy_delete(run_id: int, req: Request):
     trivy.drop_log(run_id)
     with session_scope() as s:
         s.execute(delete(TrivyScan).where(TrivyScan.id == run_id))
+    return {"deleted": run_id}
+
+
+# ---------------------------------------------------------------- Kubernetes Security (Kubescape)
+@router.get("/kubescape")
+def kubescape_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [kubescape.summary(r) for r in s.execute(select(KubescapeScan).order_by(desc(KubescapeScan.id)).limit(limit)).scalars()]}
+
+
+@router.get("/kubescape/overview")
+def kubescape_overview():
+    return kubescape.overview()
+
+
+@router.post("/kubescape")
+def kubescape_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": kubescape.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/kubescape/{run_id}")
+def kubescape_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(KubescapeScan, run_id)
+        if not r:
+            raise HTTPException(404, "scan not found")
+        return kubescape.row(r)
+
+
+@router.get("/kubescape/{run_id}/log")
+def kubescape_log(run_id: int, offset: int = 0):
+    return kubescape.get_log(run_id, offset)
+
+
+@router.post("/kubescape/{run_id}/cancel")
+def kubescape_cancel(run_id: int, req: Request):
+    ok = kubescape.cancel(run_id)
+    st.audit("kubescape_scan_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/kubescape/{run_id}")
+def kubescape_delete(run_id: int, req: Request):
+    if kubescape.is_active(run_id):
+        raise HTTPException(409, "cancel the running scan first")
+    kubescape.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(KubescapeScan).where(KubescapeScan.id == run_id))
     return {"deleted": run_id}
 
 

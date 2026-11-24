@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-5">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">Manifest Security Scan
+        <span class="small text-body-secondary ms-auto">Kubescape</span></div>
+      <div class="card-body">
+        <p class="small text-body-secondary">Scan Kubernetes manifests / Helm output against compliance frameworks. Runs fully offline with baked controls &mdash; <b>no cluster access required</b>.</p>
+        <form id="ksForm">
+          <label class="form-label" for="ksName">Label</label>
+          <input class="form-control mb-3" id="ksName" placeholder="my-deployment.yaml" value="manifest">
+
+          <label class="form-label mb-1">Frameworks</label>
+          <div class="d-flex flex-wrap gap-2 mb-3" id="ksFw">
+            <div class="form-check"><input class="form-check-input ksFw" type="checkbox" value="nsa" id="ksf-nsa" checked><label class="form-check-label small" for="ksf-nsa">NSA</label></div>
+            <div class="form-check"><input class="form-check-input ksFw" type="checkbox" value="mitre" id="ksf-mitre" checked><label class="form-check-label small" for="ksf-mitre">MITRE ATT&amp;CK</label></div>
+            <div class="form-check"><input class="form-check-input ksFw" type="checkbox" value="cis-v1.10.0" id="ksf-cis"><label class="form-check-label small" for="ksf-cis">CIS v1.10</label></div>
+            <div class="form-check"><input class="form-check-input ksFw" type="checkbox" value="allcontrols" id="ksf-all"><label class="form-check-label small" for="ksf-all">All controls</label></div>
+          </div>
+
+          <div class="d-flex align-items-center mb-1"><label class="form-label mb-0" for="ksManifest">Manifest (YAML)</label>
+            <label class="btn btn-sm btn-link ms-auto py-0 mb-0" for="ksFile">Load file…</label>
+            <input type="file" id="ksFile" accept=".yaml,.yml,.json,.txt" class="d-none">
+            <button type="button" class="btn btn-sm btn-link py-0 mb-0" id="ksSample">Sample</button></div>
+          <textarea class="form-control mono small mb-1" id="ksManifest" rows="12" spellcheck="false" placeholder="apiVersion: apps/v1&#10;kind: Deployment&#10;..."></textarea>
+          <div class="small text-body-secondary mb-3" id="ksSize">0 bytes · limit 512 KB</div>
+
+          <button class="btn btn-primary w-100" type="submit" id="ksGo">Scan Manifest</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Scan History <span class="badge text-bg-light border ms-2" id="ksRunsCount"></span></div>
+      <div class="card-body p-0" style="max-height:40vh;overflow:auto"><ul class="list-group list-group-flush small" id="ksRuns"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-7">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Result <span id="ksState" class="ms-2"></span>
+        <span class="small text-body-secondary ms-2" id="ksLabel"></span>
+        <a href="#" class="small ms-2 d-none" id="ksLogOpen">Log &#8599;</a>
+        <div class="ms-auto d-flex gap-2"><input class="form-control form-control-sm" style="max-width:160px" id="ksSearch" placeholder="filter control">
+          <button class="btn btn-sm btn-outline-secondary" id="ksExport" disabled>Export JSON</button>
+          <button class="btn btn-sm btn-outline-danger" id="ksCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 align-items-stretch mb-3" id="ksTop"></div>
+        <div id="ksFwRow" class="d-flex flex-wrap gap-2 mb-3"></div>
+        <div class="table-responsive" style="max-height:58vh;overflow:auto"><div id="ksTable"><div class="empty">Scan a manifest to see failed controls.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="ksLogModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Kubescape log <span class="mono small text-body-secondary ms-1" id="ksLogTitle"></span></h5>
+    <span class="badge text-bg-secondary ms-2" id="ksLogState">idle</span>
+    <div class="form-check form-switch ms-auto me-2 mb-0"><input class="form-check-input" type="checkbox" id="ksLogScroll" checked><label class="form-check-label small" for="ksLogScroll">Follow</label></div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body p-0"><pre class="oss-log code mb-0 p-3" id="ksLogView" style="min-height:50vh;max-height:70vh;overflow:auto"></pre></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/kubescape.js') }}"></script>{% endblock %}

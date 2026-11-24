@@ -71,6 +71,7 @@ services:
       RECON_SQLMAP: recon-sqlmap:7007
       RECON_COMMIX: recon-commix:7008
       RECON_TRIVY: recon-trivy:7009
+      RECON_KUBESCAPE: recon-kubescape:7010
       REPORT_DIR: /var/log/was-troubleshooter/reports
       WORDLIST_DIR: /var/lib/was-troubleshooter/wordlists
       TZ: ${tz:-Europe/Istanbul}
@@ -126,6 +127,7 @@ services:
       RECON_COMMIX_RETRIES: ${recon_commix_retries:-}
       RECON_TRIVY_TIMEOUT: ${recon_trivy_timeout:-}
       RECON_TRIVY_STAGE_TIMEOUT: ${recon_trivy_stage_timeout:-}
+      RECON_KUBESCAPE_STAGE_TIMEOUT: ${recon_kubescape_stage_timeout:-}
       RECON_COMMIX_STAGE_TIMEOUT: ${recon_commix_stage_timeout:-}
     volumes:
       - ./api:/app:ro
@@ -232,6 +234,11 @@ services:
   recon-trivy:
     build: {context: ./docker/recon, dockerfile: Dockerfile.trivy}
     image: was-troubleshooter-trivy
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+  recon-kubescape:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.kubescape}
+    image: was-troubleshooter-kubescape
     networks: [wastroubleshooter]
     restart: unless-stopped
 
