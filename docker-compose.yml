@@ -117,6 +117,8 @@ services:
       RECON_SQLMAP_LEVEL: ${recon_sqlmap_level:-}
       RECON_SQLMAP_RISK: ${recon_sqlmap_risk:-}
       RECON_SQLMAP_THREADS: ${recon_sqlmap_threads:-}
+      RECON_SQLMAP_TIMEOUT: ${recon_sqlmap_timeout:-}
+      RECON_SQLMAP_RETRIES: ${recon_sqlmap_retries:-}
       RECON_SQLMAP_STAGE_TIMEOUT: ${recon_sqlmap_stage_timeout:-}
       RECON_COMMIX_LEVEL: ${recon_commix_level:-}
       RECON_COMMIX_STAGE_TIMEOUT: ${recon_commix_stage_timeout:-}

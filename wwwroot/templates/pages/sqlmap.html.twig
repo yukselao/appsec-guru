@@ -1,44 +1,101 @@
 {% extends 'base.html.twig' %}
 {% block content %}
 <div class="row g-3">
-  <div class="col-xl-4">
+  <div class="col-xl-5">
     <div class="card mb-3">
-      <div class="card-header">New SQLMap scan</div>
+      <div class="card-header d-flex align-items-center">New SQLMap Assessment
+        <span class="small text-body-secondary ms-auto">Detection &amp; validation</span></div>
       <div class="card-body">
-        <p class="small text-body-secondary">SQL-injection detection with <b>SQLMap</b>, in its own container. Detection &amp; enumeration only. Lab use only &mdash; test hosts you are authorised to.</p>
+        <p class="small text-body-secondary">Detection mode only &mdash; no data extraction or modification. Lab use only, test hosts you are authorised to.</p>
         <form id="sqForm">
-          <label class="form-label" for="sqTarget">Target URL</label>
-          <input class="form-control mb-2" id="sqTarget" placeholder="http://192.168.1.140:3000/rest/products/search?q=1">
-          <label class="form-label" for="sqData">POST data <span class="small text-body-secondary">(optional)</span></label>
-          <input class="form-control mb-2 mono" id="sqData" placeholder="id=1&amp;name=x">
-          <label class="form-label" for="sqCookie">Cookie <span class="small text-body-secondary">(optional)</span></label>
-          <input class="form-control mb-2 mono" id="sqCookie" placeholder="PHPSESSID=...; security=low">
-          <div class="row g-2">
-            <div class="col-4"><label class="form-label" for="sqLevel">Level</label>
-              <select class="form-select" id="sqLevel"><option value="">default</option>{% for n in 1..5 %}<option>{{ n }}</option>{% endfor %}</select></div>
-            <div class="col-4"><label class="form-label" for="sqRisk">Risk</label>
-              <select class="form-select" id="sqRisk"><option value="">default</option>{% for n in 1..3 %}<option>{{ n }}</option>{% endfor %}</select></div>
-            <div class="col-4"><label class="form-label" for="sqTech">Technique</label><input class="form-control" id="sqTech" placeholder="BEU" maxlength="6"></div>
+          <label class="form-label mb-1">HTTP Method &amp; Target URL</label>
+          <div class="input-group mb-2">
+            <select class="form-select flex-grow-0 w-auto" id="sqMethod">{% for m in ['GET','POST','PUT','DELETE','PATCH'] %}<option>{{ m }}</option>{% endfor %}</select>
+            <input class="form-control" id="sqTarget" placeholder="http://192.168.1.140:3000/rest/products/search?q=1">
           </div>
-          <div class="form-check form-switch mt-2 mb-2"><input class="form-check-input" type="checkbox" id="sqDbs"><label class="form-check-label" for="sqDbs">Enumerate databases (--dbs)</label></div>
-          <div class="form-text mb-3">Level/risk/threads defaults &amp; limits: <a href="/settings">Settings</a> &rarr; SQLMap. Technique letters: B,E,U,S,T,Q.</div>
-          <button class="btn btn-primary w-100" type="submit" id="sqGo">Start scan</button>
+          <label class="form-label small" for="sqData">Request body <span class="mono text-body-secondary">--data</span></label>
+          <input class="form-control form-control-sm mb-2 mono" id="sqData" placeholder="id=1&amp;name=x">
+          <label class="form-label small" for="sqCookie">Cookie <span class="mono text-body-secondary">--cookie</span></label>
+          <input class="form-control form-control-sm mb-2 mono" id="sqCookie" placeholder="PHPSESSID=...; security=low">
+          <label class="form-label small" for="sqHeaders">Custom headers <span class="mono text-body-secondary">-H</span> <span class="text-body-secondary">(one per line)</span></label>
+          <textarea class="form-control form-control-sm mb-2 mono" id="sqHeaders" rows="2" placeholder="X-Requested-With: XMLHttpRequest"></textarea>
+
+          <div class="row g-2 mb-3">
+            <div class="col-5"><label class="form-label small" for="sqAuthType">Authentication</label>
+              <select class="form-select form-select-sm" id="sqAuthType"><option value="">None</option><option>Basic</option><option>Digest</option><option>Bearer</option><option>NTLM</option></select></div>
+            <div class="col-7"><label class="form-label small" for="sqAuthCred">Credentials <span class="mono text-body-secondary">name:password</span></label><input class="form-control form-control-sm mono" id="sqAuthCred" placeholder="user:pass" disabled></div>
+          </div>
+
+          <label class="form-label mb-1">Scan Profile</label>
+          <div class="btn-group w-100 mb-3" role="group">
+            <input type="radio" class="btn-check" name="sqProfile" id="sp-quick" value="quick" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="sp-quick">Quick Detection</label>
+            <input type="radio" class="btn-check" name="sqProfile" id="sp-standard" value="standard" autocomplete="off" checked>
+            <label class="btn btn-outline-secondary" for="sp-standard">Standard Assessment</label>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-4"><label class="form-label small" for="sqLevel">Level <span class="mono text-body-secondary">--level</span></label>
+              <select class="form-select form-select-sm" id="sqLevel">{% for n in 1..5 %}<option>{{ n }}</option>{% endfor %}</select></div>
+            <div class="col-4"><label class="form-label small" for="sqRisk">Risk <span class="mono text-body-secondary">--risk</span></label>
+              <select class="form-select form-select-sm" id="sqRisk">{% for n in 1..3 %}<option>{{ n }}</option>{% endfor %}</select></div>
+            <div class="col-4"><label class="form-label small" for="sqDbms">DB engine <span class="mono text-body-secondary">--dbms</span></label>
+              <select class="form-select form-select-sm" id="sqDbms"><option value="">Automatic</option>{% for d in ['MySQL','MariaDB','PostgreSQL','Microsoft SQL Server','Oracle','SQLite','IBM DB2','Firebird','Sybase','SAP MaxDB','Microsoft Access'] %}<option>{{ d }}</option>{% endfor %}</select></div>
+          </div>
+
+          <label class="form-label mb-1">Detection Techniques <span class="mono small text-body-secondary">--technique</span></label>
+          <div class="row row-cols-1 g-1 mb-3" id="sqTech">
+            {% for t in [
+              {'k':'B','n':'Boolean-based Blind','d':'Logical differences in HTTP responses.'},
+              {'k':'E','n':'Error-based','d':'Database error messages.'},
+              {'k':'U','n':'UNION Query-based','d':'UNION-query related injection.'},
+              {'k':'T','n':'Time-based Blind','d':'Changes in response times.'},
+              {'k':'Q','n':'Inline Queries','d':'Injection inside subqueries.'},
+              {'k':'S','n':'Stacked Queries','d':'Runs multiple statements — higher operational risk.','risk':true}] %}
+            <div class="col"><div class="form-check">
+              <input class="form-check-input sqTech" type="checkbox" value="{{ t.k }}" id="st-{{ t.k }}">
+              <label class="form-check-label small" for="st-{{ t.k }}"><span class="badge text-bg-dark">{{ t.k }}</span> {{ t.n }}{% if t.risk %} <span class="badge text-bg-warning">high risk</span>{% endif %}<div class="text-body-secondary">{{ t.d }}</div></label>
+            </div></div>
+            {% endfor %}
+          </div>
+
+          <div class="accordion accordion-flush mb-3" id="sqAdvAcc">
+            <div class="accordion-item">
+              <h3 class="accordion-header"><button class="accordion-button collapsed px-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#sqAdv">Advanced &amp; Session Settings</button></h3>
+              <div id="sqAdv" class="accordion-collapse collapse" data-bs-parent="#sqAdvAcc"><div class="accordion-body px-0">
+                <div class="row g-2">
+                  <div class="col-6 col-md-3"><label class="form-label small" for="sqThreads">Threads</label><input class="form-control form-control-sm" id="sqThreads" type="number" min="1" max="10" value="1"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small" for="sqTo">Timeout (s)</label><input class="form-control form-control-sm" id="sqTo" type="number" min="1" max="120" value="30"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small" for="sqDelay">Delay (s)</label><input class="form-control form-control-sm" id="sqDelay" type="number" min="0" max="10" step="0.5" value="0"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small" for="sqRetries">Retries</label><input class="form-control form-control-sm" id="sqRetries" type="number" min="0" max="5" value="2"></div>
+                  <div class="col-12"><label class="form-label small" for="sqProxy">Proxy <span class="mono text-body-secondary">--proxy</span></label><input class="form-control form-control-sm mono" id="sqProxy" placeholder="http://127.0.0.1:8080"></div>
+                  <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="sqFlush"><label class="form-check-label" for="sqFlush">Fresh session <span class="mono small text-body-secondary">--flush-session</span> <span class="text-body-secondary">(ignore cached results, re-test)</span></label></div></div>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">Generated CLI Command</span>
+            <button type="button" class="btn btn-sm btn-link ms-auto py-0" id="sqCopy">Copy</button></div>
+          <pre class="code small p-2 mb-3" id="sqCli" style="white-space:pre-wrap;word-break:break-all"></pre>
+
+          <button class="btn btn-primary w-100" type="submit" id="sqGo">Start SQLMap Assessment</button>
         </form>
       </div>
     </div>
     <div class="card">
       <div class="card-header d-flex align-items-center">History <span class="badge text-bg-light border ms-2" id="sqRunsCount"></span></div>
-      <div class="card-body p-0" style="max-height:60vh;overflow:auto"><ul class="list-group list-group-flush small" id="sqRuns"></ul></div>
+      <div class="card-body p-0" style="max-height:40vh;overflow:auto"><ul class="list-group list-group-flush small" id="sqRuns"></ul></div>
     </div>
   </div>
-  <div class="col-xl-8">
+  <div class="col-xl-7">
     <div class="card">
       <div class="card-header d-flex align-items-center">Result <span id="sqState" class="ms-2"></span>
         <a href="#" class="small ms-2 d-none" id="sqLogOpen">Live log &#8599;</a>
         <div class="ms-auto d-flex gap-2"><button class="btn btn-sm btn-outline-danger" id="sqCancel" disabled>Cancel</button></div>
       </div>
       <div class="card-body">
-        <div id="sqSummary"><div class="empty">Start a scan to see injection findings.</div></div>
+        <div id="sqSummary"><div class="empty">Start an assessment to see injection findings.</div></div>
       </div>
     </div>
   </div>

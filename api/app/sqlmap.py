@@ -21,6 +21,13 @@ SQLMAP = os.environ.get("RECON_SQLMAP", "recon-sqlmap:7007")
 URL_RX = re.compile(r"^https?://[\w.\-]+(:\d+)?(/[^\s]*)?$", re.I)
 ANSI_RX = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 TECH_RX = re.compile(r"^[BEUSTQ]{1,6}$")
+METHODS = ("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
+AUTH_TYPES = ("", "Basic", "Digest", "Bearer", "NTLM")
+DBMS_LIST = ("", "MySQL", "MariaDB", "PostgreSQL", "Microsoft SQL Server", "Oracle", "SQLite",
+             "IBM DB2", "Firebird", "Sybase", "SAP MaxDB", "Microsoft Access")
+HEADER_RX = re.compile(r"^[A-Za-z0-9\-]+:\s?.+$")
+PROXY_RX = re.compile(r"^(https?|socks[45])://[\w.\-]+:\d{1,5}$", re.I)
+CRED_RX = re.compile(r"^[^\s:]+:[^\r\n]+$")
 LOG_MAX = 6000
 LOG_RUNS = 25
 _active = {}
@@ -102,40 +109,92 @@ def _clean_url(raw):
     return u
 
 
-def _argv(url, opts):
+def _argv(url, o):
     """Whole sqlmap argv. Detection/enumeration only - NEVER emits --os-*,
     --file-*, --sql-shell, --eval or other exploitation flags. --batch and
     --disable-coloring are forced by the container."""
-    argv = ["-u", url,
-            "--level", str(opts["level"]),
-            "--risk", str(opts["risk"]),
-            "--threads", str(opts["threads"])]
-    if opts.get("data"):
-        argv += ["--data", opts["data"]]
-    if opts.get("cookie"):
-        argv += ["--cookie", opts["cookie"]]
-    if opts.get("technique"):
-        argv += ["--technique", opts["technique"]]
-    if opts.get("dbs"):
+    argv = ["-u", url, "--level", str(o["level"]), "--risk", str(o["risk"]),
+            "--threads", str(o["threads"]), "--timeout", str(o["timeout"]), "--retries", str(o["retries"])]
+    if o.get("method") and o["method"] != "GET":
+        argv += ["--method", o["method"]]
+    if o.get("data"):
+        argv += ["--data", o["data"]]
+    if o.get("cookie"):
+        argv += ["--cookie", o["cookie"]]
+    for h in o.get("headers") or []:
+        argv += ["-H", h]
+    if o.get("auth_type") and o.get("auth_cred"):
+        argv += ["--auth-type", o["auth_type"], "--auth-cred", o["auth_cred"]]
+    if o.get("dbms"):
+        argv += ["--dbms", o["dbms"]]
+    if o.get("technique"):
+        argv += ["--technique", o["technique"]]
+    if o.get("delay"):
+        argv += ["--delay", str(o["delay"])]
+    if o.get("proxy"):
+        argv += ["--proxy", o["proxy"]]
+    if o.get("flush_session"):
+        argv += ["--flush-session"]
+    if o.get("dbs"):
         argv += ["--dbs"]
     return argv
 
 
 def start(params, client_ip=None):
     url = _clean_url(params.get("target"))
+    method = (params.get("method") or "GET").upper()
+    if method not in METHODS:
+        raise ValueError("unsupported HTTP method")
     tech = (params.get("technique") or "").strip().upper()
     if tech and not TECH_RX.match(tech):
         raise ValueError("technique must be letters from BEUSTQ (e.g. BEU)")
+    dbms = (params.get("dbms") or "").strip()
+    if dbms and dbms not in DBMS_LIST:
+        raise ValueError("unsupported database engine")
+    auth_type = (params.get("auth_type") or "").strip()
+    if auth_type and auth_type not in AUTH_TYPES:
+        raise ValueError("unsupported authentication type")
+    auth_cred = (params.get("auth_cred") or "").strip()
+    if auth_type and not auth_cred:
+        raise ValueError("authentication credentials are required for {} auth".format(auth_type))
+    if auth_cred and not CRED_RX.match(auth_cred):
+        raise ValueError("authentication credentials must be name:password")
     data = (params.get("data") or "").strip()
     cookie = (params.get("cookie") or "").strip()
     for name, val in (("data", data), ("cookie", cookie)):
         if "\n" in val or "\r" in val:
             raise ValueError("{} must be a single line".format(name))
+    headers = []
+    for line in (params.get("headers") or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if not HEADER_RX.match(line):
+            raise ValueError("headers must be 'Name: value', one per line")
+        headers.append(line)
+    proxy = (params.get("proxy") or "").strip()
+    if proxy and not PROXY_RX.match(proxy):
+        raise ValueError("proxy must look like http://host:8080 or socks5://host:1080")
+    delay = (params.get("delay") or "").strip()
+    if delay:
+        try:
+            delay = float(delay)
+        except ValueError:
+            delay = -1
+        if delay < 0 or delay > 10:
+            raise ValueError("delay must be 0 to 10 seconds")
+    else:
+        delay = 0
     opts = {"level": st.get_int("recon.sqlmap_level", _ov(params, "level", "recon.sqlmap_level")),
             "risk": st.get_int("recon.sqlmap_risk", _ov(params, "risk", "recon.sqlmap_risk")),
             "threads": st.get_int("recon.sqlmap_threads", _ov(params, "threads", "recon.sqlmap_threads")),
+            "timeout": st.get_int("recon.sqlmap_timeout", _ov(params, "timeout", "recon.sqlmap_timeout")),
+            "retries": st.get_int("recon.sqlmap_retries", _ov(params, "retries", "recon.sqlmap_retries")),
             "stage_timeout": st.get_int("recon.sqlmap_stage_timeout"),
-            "data": data, "cookie": cookie, "technique": tech, "dbs": bool(params.get("dbs"))}
+            "method": method, "data": data, "cookie": cookie, "headers": headers,
+            "auth_type": auth_type, "auth_cred": auth_cred, "dbms": dbms, "technique": tech,
+            "delay": delay, "proxy": proxy, "flush_session": bool(params.get("flush_session")),
+            "dbs": bool(params.get("dbs")), "profile": (params.get("profile") or "")[:20]}
     with session_scope() as s:
         r = SqlmapRun(target=url, status="pending", options=opts)
         s.add(r)
@@ -158,7 +217,7 @@ def _ov(params, key, setting_key):
 
 def _run(run_id, url, opts, cancel_ev):
     argv = _argv(url, opts)
-    shown = [a if not (i and argv[i - 1] in ("--cookie", "--data")) else "***" for i, a in enumerate(argv)]
+    shown = [a if not (i and argv[i - 1] in ("--cookie", "--data", "--auth-cred", "-H")) else "***" for i, a in enumerate(argv)]
     st_ = {"vulnerable": False, "dbms": "", "injections": [], "databases": []}
     collecting = {"dbs": False}
     saw_error = []
@@ -274,9 +333,11 @@ def row(r):
 def _safe_opts(opts):
     """Hide cookie/data values in API responses."""
     o = dict(opts or {})
-    for k in ("cookie", "data"):
+    for k in ("cookie", "data", "auth_cred"):
         if o.get(k):
             o[k] = "***"
+    if o.get("headers"):
+        o["headers"] = ["***"] * len(o["headers"])
     return o
 
 
