@@ -33,7 +33,7 @@
     <section id="pipeline" class="mb-4">
       <h3 class="h5">How a scan works</h3>
       <ol>
-        <li>You pick a target, a source policy and plugin families in <a href="/create-scan">Create Scan</a> (or save them as a profile in <a href="/scans">Scans</a>).</li>
+        <li>You pick a target, a source policy and plugin families in <a href="/scans">Scans</a>.</li>
         <li>The cockpit <b>copies</b> the policy (the original is never changed), enables the families and writes the scope preferences.</li>
         <li>It launches the scan on Security Center, which hands it to a WAS sensor.</li>
         <li>It opens an ssh stream to that sensor and captures <b>only this scan's</b> log lines (matched by the <code>[scanUuid=…]</code> tag) into a file and per-minute charts.</li>

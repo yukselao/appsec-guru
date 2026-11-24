@@ -51,6 +51,8 @@ FIELDS = {
     "recon.httpx_retries": ("0", False, "RECON_HTTPX_RETRIES"),
     "recon.idle_timeout": ("180", False, "RECON_IDLE_TIMEOUT"),
     "recon.stage_timeout": ("900", False, "RECON_STAGE_TIMEOUT"),
+    "recon.rustscan_batch": ("1000", False, "RECON_RUSTSCAN_BATCH"),
+    "recon.rustscan_timeout": ("2500", False, "RECON_RUSTSCAN_TIMEOUT"),
 }
 # key -> (min, max) of whole-number settings; checked on save and clamped on use
 INT_LIMITS = {
@@ -60,6 +62,8 @@ INT_LIMITS = {
     "recon.httpx_retries": (0, 5),
     "recon.idle_timeout": (30, 1800),
     "recon.stage_timeout": (60, 3600),
+    "recon.rustscan_batch": (100, 65535),
+    "recon.rustscan_timeout": (500, 20000),
 }
 SECRET_MASK = "__SET__"
 

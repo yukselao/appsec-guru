@@ -480,6 +480,8 @@
     S.families = f[0].families; S.policies = p[0].policies; S.sensors = s[0].sensors;
     S.repos = r[0].repos || []; S.zones = z[0].zones || [];
     S.creds = c[0].credentials || []; S.reports = rp[0].reports || []; tree();
+    const tgt = new URLSearchParams(location.search).get('target');
+    if (tgt) { openWizard(null); $('#pmUrl').val(tgt); }
   }).catch(e => WT.fail(e, 'Could not load scan references'));
   WT.get('/sc/templates').then(r => { S.templates = r.templates || [];
     if ($('#profModal').hasClass('show') && mode() === 'custom') setMode('custom');

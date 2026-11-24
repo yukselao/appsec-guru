@@ -245,3 +245,14 @@ body.modal-open .wt-ai-fab { display: none; }
 #psLogView .l-open { color: #2f9c8b; font-weight: 600; }
 #psLogView .l-ERROR { color: #d9534f; }
 #psLogView .l-DEBUG { color: #7d8590; }
+
+/* Create Scan wizard: vertical steps on the left */
+.wizard-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+.wizard-layout .wizard-steps { flex: 0 0 190px; flex-direction: column; flex-wrap: nowrap; gap: .35rem; margin-bottom: 0; position: sticky; top: 0; }
+.wizard-layout .wizard-steps li { flex: 0 0 auto; }
+.wizard-panes { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 767.98px) {
+  .wizard-layout { flex-direction: column; }
+  .wizard-layout .wizard-steps { flex-direction: row; flex-wrap: wrap; width: 100%; position: static; }
+  .wizard-layout .wizard-steps li { flex: 1 1 140px; }
+}

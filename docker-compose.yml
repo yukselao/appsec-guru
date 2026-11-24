@@ -95,6 +95,8 @@ services:
       RECON_HTTPX_RETRIES: ${recon_httpx_retries:-}
       RECON_IDLE_TIMEOUT: ${recon_idle_timeout:-}
       RECON_STAGE_TIMEOUT: ${recon_stage_timeout:-}
+      RECON_RUSTSCAN_BATCH: ${recon_rustscan_batch:-}
+      RECON_RUSTSCAN_TIMEOUT: ${recon_rustscan_timeout:-}
     volumes:
       - ./api:/app:ro
       - ./db:/db:ro

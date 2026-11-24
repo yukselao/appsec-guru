@@ -91,15 +91,24 @@ def update(run_id, **f):
 
 
 def start(params, client_ip=None):
-    target = (params.get("target") or "").strip()
-    target = re.sub(r"^\w+://", "", target).split("/")[0].split(":")[0]
-    if not TARGET_RX.match(target):
-        raise ValueError("enter a host or IP (no scheme)")
+    toks = []
+    for t in (params.get("target") or "").replace(" ", "").split(","):
+        if not t:
+            continue
+        t = re.sub(r"^\w+://", "", t)            # strip a scheme
+        t = re.sub(r"/(?!\d{1,3}$).*$", "", t)   # drop a URL path but keep a CIDR suffix
+        t = re.sub(r":\d+$", "", t)              # strip a trailing :port
+        if not re.match(r"^[A-Za-z0-9.-]{1,255}(/\d{1,3})?$", t):
+            raise ValueError("invalid target '{}' - use a host, IP or CIDR (e.g. 192.168.1.0/24)".format(t))
+        toks.append(t)
+    if not toks:
+        raise ValueError("enter a host, IP or CIDR; separate several with commas")
+    target = ",".join(toks)
     ports = (params.get("ports") or "").strip().replace(" ", "")
     if ports and not (re.match(r"^\d{1,5}-\d{1,5}$", ports) or re.match(r"^\d{1,5}(,\d{1,5})*$", ports)):
         raise ValueError("ports must be one range (e.g. 1-1000) or a comma list (e.g. 22,80,443)")
-    opts = {"ports": ports, "full": bool(params.get("full")), "timeout": max(1000, min(int(params.get("timeout") or 2500), 10000)),
-            "batch": max(100, min(int(params.get("batch") or 4500), 65535))}
+    opts = {"ports": ports, "full": bool(params.get("full")),
+            "timeout": st.get_int("recon.rustscan_timeout"), "batch": st.get_int("recon.rustscan_batch")}
     with session_scope() as s:
         r = PortScanRun(target=target, ports=ports or None, status="pending", options=opts)
         s.add(r)
@@ -123,12 +132,14 @@ def _run(run_id, target, opts, cancel_ev):
     payload = "{} {}".format(target, ports).strip()
     found = {}            # ip -> set(open ports), filled live from "Open ip:port"
     saw_error = []
-    _log_append(run_id, "$ rustscan -a {}{}".format(target, " " + ports if ports else " (default ports)"))
+    _log_append(run_id, "$ rustscan -a {}{} -b {} -t {}".format(
+        target, " " + ports if ports else " (default ports)", opts["batch"], opts["timeout"]))
     try:
         update(run_id, status="running")
         host, port = _hostport(RUSTSCAN)
         s = socket.create_connection((host, port), timeout=15)
-        s.sendall((payload + "\n__END__\n").encode("utf-8"))
+        head = "__OPTS__ batch={} timeout={}\n".format(int(opts["batch"]), int(opts["timeout"]))
+        s.sendall((head + payload + "\n__END__\n").encode("utf-8"))
         s.settimeout(120)
         rbuf, last_push = b"", 0.0
 

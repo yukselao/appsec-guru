@@ -19,7 +19,7 @@
         <td>${x.duration_s ? WT.dur(x.duration_s) : ''}</td>
         <td>${Object.entries(x.severity).map(([k, v]) => WT.sevBadge(k) + ' ' + v).join(' ')}</td>
         <td class="text-end">${(x.log_counts || {}).total || 0}</td><td class="small">${WT.dt(x.created_at)}</td></tr>`).join('')
-        : '<tr><td colspan="10" class="empty px-3">No runs yet. Start one from <a href="/create-scan">Create Scan</a>.</td></tr>');
+        : '<tr><td colspan="10" class="empty px-3">No runs yet. Start one from <a href="/scans">Scans</a>.</td></tr>');
     }).catch(e => { WT.fail(e); $('#runsBody').html('<tr><td colspan="10" class="empty px-3">Could not load runs.</td></tr>'); });
   }
   function loadSc() {
@@ -44,7 +44,8 @@
       const card = (l, v) => `<div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="value" style="font-size:1.1rem">${v}</div><div class="label">${l}</div></div></div></div>`;
       $('#sdCards').html(card('Duration', WT.dur(res.scanDuration)) + card('Started', res.startTime > 0 ? new Date(res.startTime * 1000).toLocaleString('en-GB') : '–')
         + card('Import', WT.esc(res.importStatus || '–')) + card('Target / scanner', `<span class="small">${WT.esc(tg.join(', ') || '–')}</span>`));
-      $('#sdNotes').html(notes.length ? `<div class="card mb-3"><div class="card-header">Scanner notes</div><div class="card-body small" style="white-space:pre-wrap">${WT.esc(notes.join('\n'))}</div></div>` : '');
+      $('#sdNotes').html((r.note ? `<div class="alert alert-info py-2 mb-3">${WT.esc(r.note)}</div>` : '')
+        + (notes.length ? `<div class="card mb-3"><div class="card-header">Scanner notes</div><div class="card-body small" style="white-space:pre-wrap">${WT.esc(notes.join('\n'))}</div></div>` : ''));
       $('#sdFind').html(findTable(r.findings, '/scan-results/sc/' + encodeURIComponent(scId)));
       const sev = {}; r.findings.forEach(f => { sev[f.severity] = (sev[f.severity] || 0) + 1; });
       const order = ['Critical', 'High', 'Medium', 'Low', 'Info'], colors = ['#1c2126', '#2f4a52', '#c98a2b', '#2f9c8b', '#9aa6ad'];

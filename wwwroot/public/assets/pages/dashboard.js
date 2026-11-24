@@ -13,14 +13,11 @@
     const dbg = d.debug || {};
     $('#dbgLevel').text((dbg.level || '–').replace('(varsayilan)', '(default)'));
     $('#dbgSvc').attr('class', 'badge text-bg-' + (dbg.active === 'active' ? 'success' : 'danger')).text(dbg.active ? 'service ' + dbg.active : '–');
-    const byResult = {};
-    d.runs.recent.forEach(r => { if (r.sc_result_id) byResult[r.sc_result_id] = r; });
-    $('#dashRunning').html(WT.runningRows(d, {runsByResult: byResult}));
     $('#dashRecent').html(d.runs.recent.length ? d.runs.recent.map(r => `<tr>
       <td><a href="/scan-results/${r.id}">${r.id}</a></td><td>${WT.esc(r.name)}</td><td class="small">${WT.esc(r.target_url)}</td>
       <td>${WT.statusBadge(r.status)}</td><td>${r.duration_s ? WT.dur(r.duration_s) : ''}</td>
       <td>${Object.entries(r.severity).map(([k, v]) => WT.sevBadge(k) + ' ' + v).join(' ')}</td><td class="small">${WT.dt(r.created_at)}</td></tr>`).join('')
-      : '<tr><td colspan="7" class="empty px-3">No runs yet. Start one from <a href="/create-scan">Create Scan</a>.</td></tr>');
+      : '<tr><td colspan="7" class="empty px-3">No runs yet. Start one from <a href="/scans">Scans</a>.</td></tr>');
     drawCharts(d);
   }
 
@@ -59,5 +56,5 @@
 
   WT.sensorSelect('#dashSensor', {hideWhenSingle: false, onChange: load});
   load();
-  setInterval(() => { if ($('#dashAuto').prop('checked') && !document.hidden) load(); }, 5000);
+  setInterval(() => { if (!document.hidden) load(); }, 5000);
 })(jQuery, window.WT);

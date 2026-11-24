@@ -77,8 +77,10 @@
   WT.dt = iso => iso ? new Date(iso).toLocaleString('en-GB') : '';
   // "3m 14s" between two ISO times (until now while the end is missing)
   WT.dur = function (from, to) {
-    if (!from) return '';
-    const s = Math.max(0, Math.round(((to ? new Date(to) : new Date()) - new Date(from)) / 1000));
+    if (from == null || from === '') return '';
+    let s;
+    if (to === undefined && Number.isFinite(Number(from))) s = Math.max(0, Math.round(Number(from)));  // a number of seconds
+    else s = Math.max(0, Math.round(((to ? new Date(to) : new Date()) - new Date(from)) / 1000));       // between two dates
     return s < 60 ? s + 's' : s < 3600 ? Math.floor(s / 60) + 'm ' + s % 60 + 's' : Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm';
   };
   // Run history in the address bar: /<page>/<run id>.

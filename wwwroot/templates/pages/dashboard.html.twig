@@ -39,17 +39,6 @@
   </div>
 </div>
 
-<div class="card mb-3">
-  <div class="card-header d-flex align-items-center">Running scans <span class="small text-body-secondary fw-normal ms-2">click a row to open its live log</span>
-    <div class="ms-auto form-check form-switch small mb-0"><input class="form-check-input" type="checkbox" id="dashAuto" checked><label class="form-check-label" for="dashAuto">refresh every 5 s</label></div>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
-      <thead><tr><th>SC result</th><th>Name</th><th>Status</th><th>Elapsed</th><th>Scanner</th><th>Target</th><th>Scanner UUID</th><th></th></tr></thead>
-      <tbody id="dashRunning"><tr><td colspan="8" class="empty px-3">Loading…</td></tr></tbody>
-    </table></div>
-  </div>
-</div>
 
 <div class="card">
   <div class="card-header d-flex">Recent DAST runs<a class="ms-auto small" href="/scan-results">All results</a></div>
@@ -61,4 +50,4 @@
   </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ asset('pages/runningscans.js') }}"></script><script src="{{ asset('pages/dashboard.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/dashboard.js') }}"></script>{% endblock %}

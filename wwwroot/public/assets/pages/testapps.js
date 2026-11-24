@@ -32,7 +32,7 @@
         </div>
         <div class="card-footer d-flex align-items-center gap-2">
           <a class="small mono text-truncate" href="${WT.esc(url)}" target="_blank" rel="noopener">${WT.esc(url)}</a>
-          <a class="btn btn-sm btn-primary ms-auto text-nowrap" href="/create-scan?target=${encodeURIComponent(url)}">Scan this</a>
+          <a class="btn btn-sm btn-primary ms-auto text-nowrap" href="/scans?target=${encodeURIComponent(url)}">Scan this</a>
         </div></div></div>`;
     }).join(''));
   }

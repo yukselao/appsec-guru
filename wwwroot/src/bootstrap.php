@@ -12,7 +12,6 @@ const PAGES = [
     'hidden-paths'     => ['title' => 'Hidden Path Discovery', 'group' => 'Open Source Tools', 'icon' => 'search', 'template' => 'pages/fuzz.html.twig'],
     'port-scan'        => ['title' => 'Port Scan', 'group' => 'Open Source Tools', 'icon' => 'ports', 'template' => 'pages/portscan.html.twig'],
     'scans'            => ['title' => 'Scans', 'group' => 'Tenable Web App Scanning', 'icon' => 'radar', 'template' => 'pages/scans.html.twig'],
-    'create-scan'      => ['title' => 'Create Scan', 'group' => 'Tenable Web App Scanning', 'icon' => 'plus', 'template' => 'pages/scan.html.twig', 'hidden' => true],
     'logs'             => ['title' => 'Logs', 'group' => 'Tenable Web App Scanning', 'icon' => 'terminal', 'template' => 'pages/logs.html.twig'],
     'scan-results'     => ['title' => 'Scan Results', 'group' => 'Tenable Web App Scanning', 'icon' => 'list', 'template' => 'pages/results.html.twig'],
     'deploy-test-apps' => ['title' => 'Deploy Test Apps', 'group' => 'Tenable Web App Scanning', 'icon' => 'box', 'template' => 'pages/testapps.html.twig'],

@@ -40,10 +40,12 @@
 <div class="modal fade" id="profModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
   <div class="modal-header"><h5 class="modal-title" id="pmTitle">Create Tenable WAS Scan</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
   <div class="modal-body">
+    <div class="wizard-layout">
     <ol class="wizard-steps" id="pmSteps">
       <li class="active" data-step="1">General</li><li data-step="2">Scan type</li><li data-step="3">Settings</li>
       <li data-step="4">Targets</li><li data-step="5">Credentials</li><li data-step="6">Post Scan</li>
     </ol>
+    <div class="wizard-panes">
 
     {# ---- 1 · General ---- #}
     <section class="wizard-pane active" data-pane="1">
@@ -166,6 +168,8 @@
       <div id="pmReports"></div>
       <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="pmAddReport">+ Add report</button>
     </section>
+    </div>
+    </div>
   </div>
   <div class="modal-footer">
     <div class="form-check form-switch me-auto"><input class="form-check-input" type="checkbox" id="pmRunNow"><label class="form-check-label" for="pmRunNow">Run immediately after saving</label></div>
@@ -175,4 +179,4 @@
   </div>
 </div></div></div>
 {% endblock %}
-{% block scripts %}<script src="{{ asset('pages/runningscans.js') }}"></script><script src="{{ asset('pages/scans.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/scans.js') }}"></script>{% endblock %}

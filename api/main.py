@@ -274,7 +274,26 @@ def sc_results(days: int = 14):
 @router.get("/sc/results/{rid}")
 def sc_result(rid: str):
     sc = conn.sc()
-    return {"result": sc.scan_result(rid), "findings": runs.findings(sc, rid)}
+    res = sc.scan_result(rid)
+    running = str(res.get("running", "")).lower() == "true" or \
+        str(res.get("status", "")).lower() in ("running", "queued", "pending", "paused")
+    no_results = str(res.get("importStatus") or "").strip().lower() == "no results"
+    note = None
+    if running or no_results:
+        # Security Center has not imported results yet; asking for the findings
+        # here returns a misleading "error_code=146 repository access" error.
+        findings = []
+        note = "The scan is still running — findings appear once it finishes and Security Center imports the result." \
+            if running else "Security Center has not imported any results for this scan yet."
+    else:
+        try:
+            findings = runs.findings(sc, rid)
+        except SCError as exc:
+            if "error_code=146" in str(exc):   # result not in an accessible repository yet
+                findings, note = [], "Findings are not available yet (the result is not in an accessible repository)."
+            else:
+                raise
+    return {"result": res, "findings": findings, "note": note}
 
 
 @router.post("/sc/results/{rid}/stop")
