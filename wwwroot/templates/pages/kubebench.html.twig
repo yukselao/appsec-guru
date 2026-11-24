@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">CIS Kubernetes Benchmark
+        <span class="small text-body-secondary ms-auto">kube-bench</span></div>
+      <div class="card-body">
+        <div class="alert alert-warning py-2 small"><b>Node-level check.</b> kube-bench inspects the host it runs on. For a meaningful assessment it must run on / target a real Kubernetes control-plane or worker node (via an in-cluster sensor). Run here, it benchmarks the scanner container.</div>
+        <form id="kbForm">
+          <label class="form-label" for="kbBench">Benchmark</label>
+          <select class="form-select mb-3" id="kbBench">
+            <option value="cis-1.9" selected>CIS Kubernetes v1.9</option>
+            <option value="cis-1.10">CIS Kubernetes v1.10</option>
+            <option value="cis-1.8">CIS Kubernetes v1.8</option>
+            <option value="cis-1.7">CIS Kubernetes v1.7</option>
+            <option value="eks-1.5">CIS Amazon EKS v1.5</option>
+            <option value="aks-1.7">CIS Azure AKS v1.7</option>
+            <option value="gke-1.6">CIS Google GKE v1.6</option>
+          </select>
+          <label class="form-label mb-1">Targets</label>
+          <div class="d-flex flex-wrap gap-2 mb-3" id="kbTargets">
+            {% for t in ['master','node','etcd','controlplane','policies'] %}
+            <div class="form-check"><input class="form-check-input kbT" type="checkbox" value="{{ t }}" id="kbt-{{ t }}" {{ t in ['master','node'] ? 'checked' : '' }}><label class="form-check-label small text-capitalize" for="kbt-{{ t }}">{{ t }}</label></div>
+            {% endfor %}
+          </div>
+          <pre class="code small p-2 mb-3" id="kbCli" style="white-space:pre-wrap"></pre>
+          <button class="btn btn-primary w-100" type="submit" id="kbGo">Run Benchmark</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex align-items-center">History <span class="badge text-bg-light border ms-2" id="kbRunsCount"></span></div>
+      <div class="card-body p-0" style="max-height:38vh;overflow:auto"><ul class="list-group list-group-flush small" id="kbRuns"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Result <span id="kbState" class="ms-2"></span>
+        <span class="small text-body-secondary ms-2" id="kbLabel"></span>
+        <a href="#" class="small ms-2 d-none" id="kbLogOpen">Log &#8599;</a>
+        <div class="ms-auto d-flex gap-2">
+          <select class="form-select form-select-sm" style="max-width:130px" id="kbFilter"><option value="">All statuses</option><option>FAIL</option><option>WARN</option><option>PASS</option><option>INFO</option></select>
+          <input class="form-control form-control-sm" style="max-width:150px" id="kbSearch" placeholder="filter">
+          <button class="btn btn-sm btn-outline-secondary" id="kbExport" disabled>Export JSON</button>
+          <button class="btn btn-sm btn-outline-danger" id="kbCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3" id="kbCards"></div>
+        <div class="table-responsive" style="max-height:60vh;overflow:auto"><div id="kbTable"><div class="empty">Run a benchmark to see CIS checks.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="kbLogModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">kube-bench log <span class="mono small text-body-secondary ms-1" id="kbLogTitle"></span></h5>
+    <span class="badge text-bg-secondary ms-2" id="kbLogState">idle</span>
+    <div class="form-check form-switch ms-auto me-2 mb-0"><input class="form-check-input" type="checkbox" id="kbLogScroll" checked><label class="form-check-label small" for="kbLogScroll">Follow</label></div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body p-0"><pre class="oss-log code mb-0 p-3" id="kbLogView" style="min-height:50vh;max-height:70vh;overflow:auto"></pre></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/kubebench.js') }}"></script>{% endblock %}

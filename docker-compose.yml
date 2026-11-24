@@ -72,6 +72,7 @@ services:
       RECON_COMMIX: recon-commix:7008
       RECON_TRIVY: recon-trivy:7009
       RECON_KUBESCAPE: recon-kubescape:7010
+      RECON_KUBEBENCH: recon-kubebench:7011
       REPORT_DIR: /var/log/was-troubleshooter/reports
       WORDLIST_DIR: /var/lib/was-troubleshooter/wordlists
       TZ: ${tz:-Europe/Istanbul}
@@ -128,6 +129,7 @@ services:
       RECON_TRIVY_TIMEOUT: ${recon_trivy_timeout:-}
       RECON_TRIVY_STAGE_TIMEOUT: ${recon_trivy_stage_timeout:-}
       RECON_KUBESCAPE_STAGE_TIMEOUT: ${recon_kubescape_stage_timeout:-}
+      RECON_KUBEBENCH_STAGE_TIMEOUT: ${recon_kubebench_stage_timeout:-}
       RECON_COMMIX_STAGE_TIMEOUT: ${recon_commix_stage_timeout:-}
     volumes:
       - ./api:/app:ro
@@ -239,6 +241,11 @@ services:
   recon-kubescape:
     build: {context: ./docker/recon, dockerfile: Dockerfile.kubescape}
     image: was-troubleshooter-kubescape
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+  recon-kubebench:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.kubebench}
+    image: was-troubleshooter-kubebench
     networks: [wastroubleshooter]
     restart: unless-stopped
 

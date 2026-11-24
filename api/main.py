@@ -15,14 +15,14 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
-from app import nuclei, katana, sqlmap, commix, trivy, kubescape, findings
+from app import nuclei, katana, sqlmap, commix, trivy, kubescape, kubebench, findings
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, KubescapeScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, KubescapeScan, KubeBenchScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -55,6 +55,7 @@ try:
     commix.mark_orphans()
     trivy.mark_orphans()
     kubescape.mark_orphans()
+    kubebench.mark_orphans()
     runs.resume_orphans()
     sast.mark_orphans()
     was_scan.start_scheduler()
@@ -1449,6 +1450,52 @@ def findings_list(source: str = None, type: str = None, severity: str = None, q:
 @router.get("/findings/summary")
 def findings_summary():
     return findings.summary()
+
+
+# ---------------------------------------------------------------- kube-bench (CIS)
+@router.get("/kubebench")
+def kubebench_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [kubebench.summary(r) for r in s.execute(select(KubeBenchScan).order_by(desc(KubeBenchScan.id)).limit(limit)).scalars()]}
+
+
+@router.post("/kubebench")
+def kubebench_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": kubebench.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/kubebench/{run_id}")
+def kubebench_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(KubeBenchScan, run_id)
+        if not r:
+            raise HTTPException(404, "scan not found")
+        return kubebench.row(r)
+
+
+@router.get("/kubebench/{run_id}/log")
+def kubebench_log(run_id: int, offset: int = 0):
+    return kubebench.get_log(run_id, offset)
+
+
+@router.post("/kubebench/{run_id}/cancel")
+def kubebench_cancel(run_id: int, req: Request):
+    ok = kubebench.cancel(run_id)
+    st.audit("kubebench_scan_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/kubebench/{run_id}")
+def kubebench_delete(run_id: int, req: Request):
+    if kubebench.is_active(run_id):
+        raise HTTPException(409, "cancel the running scan first")
+    kubebench.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(KubeBenchScan).where(KubeBenchScan.id == run_id))
+    return {"deleted": run_id}
 
 
 # ------------------------------------------------------------------- audit

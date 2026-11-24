@@ -1,0 +1,14 @@
+# kube-bench (CIS Kubernetes benchmark) on the deterministic socat contract.
+# The upstream image is alpine-based with the benchmark cfg under
+# /opt/kube-bench/cfg, so we just add socat. kube-bench inspects the node it
+# runs on; meaningful results require running on / targeting a real Kubernetes
+# control-plane or worker node (via a sensor). No Docker socket is used.
+FROM aquasec/kube-bench:v0.10.7
+USER root
+RUN apk add --no-cache socat
+COPY run-kubebench.sh /usr/local/bin/run.sh
+COPY serve-kubebench.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+WORKDIR /opt/kube-bench
+ENTRYPOINT []
+CMD ["/usr/local/bin/serve.sh"]

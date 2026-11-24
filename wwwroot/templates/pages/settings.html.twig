@@ -28,6 +28,7 @@
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tCommix" type="button">Commix</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tTrivy" type="button">Trivy</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tKubescape" type="button">Kubescape</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tKubebench" type="button">kube-bench</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAudit" type="button" id="tAuditBtn">Audit</button></li>
 </ul>
 <div class="tab-content">
@@ -165,6 +166,15 @@
     <div class="alert alert-light border small">Pinned Kubescape v3.0.44. Control artifacts (NSA, MITRE, CIS, all-controls) are baked into the image for offline manifest scanning. Live cluster posture, RBAC and kube-bench CIS node benchmarks require a registered cluster / in-cluster sensor.</div>
     <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="kubescape">Save</button>
       <button class="btn btn-outline-warning ms-auto" data-reset="kubescape">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tKubebench" data-section="kubebench">
+    <div class="card mb-3"><div class="card-header">kube-bench limits</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.kubebench_stage_timeout', 'Hard time limit (s)', 'number', 'Socket safety deadline for a benchmark run. Default 600, 60 to 3600.', 'col-md-6', 60, 3600) }}
+    </div></div></div>
+    <div class="alert alert-light border small">Pinned kube-bench v0.10.7 with CIS benchmark definitions baked in. kube-bench inspects the node it runs on; a real assessment requires running on / targeting a Kubernetes control-plane or worker node via an in-cluster sensor.</div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="kubebench">Save</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="kubebench">Revert to .env</button></div>
   </div>
 
   <div class="tab-pane fade" id="tAudit">

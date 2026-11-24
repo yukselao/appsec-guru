@@ -359,3 +359,18 @@ class KubescapeScan(Base):
     stats = Column(JSONB, nullable=False, server_default="{}")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     finished_at = Column(DateTime(timezone=True))
+
+
+class KubeBenchScan(Base):
+    """A kube-bench CIS Kubernetes benchmark run. Meaningful results require
+    running on / targeting a real Kubernetes node (via a sensor)."""
+    __tablename__ = "kubebench_scans"
+    id = Column(Integer, primary_key=True)
+    benchmark = Column(String(40), nullable=False)     # e.g. cis-1.9
+    targets = Column(Text)                              # comma list: master,node,...
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    results = Column(JSONB, nullable=False, server_default="{}")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
