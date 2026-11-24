@@ -1,33 +1,84 @@
 {% extends 'base.html.twig' %}
 {% block content %}
 <div class="row g-3">
-  <div class="col-xl-4">
+  <div class="col-xl-5">
     <div class="card mb-3">
-      <div class="card-header">New Nuclei scan</div>
+      <div class="card-header d-flex align-items-center">New Nuclei Scan
+        <span class="small text-body-secondary ms-auto">Template-based assessment</span></div>
       <div class="card-body">
-        <p class="small text-body-secondary">Template-based vulnerability &amp; CVE discovery with <b>Nuclei</b>, in its own container. Lab use only &mdash; scan hosts you are authorised to test.</p>
+        <p class="small text-body-secondary">Lab use only &mdash; scan hosts you are authorised to test.</p>
         <form id="nuForm">
           <label class="form-label" for="nuTarget">Target URL</label>
-          <input class="form-control mb-2" id="nuTarget" placeholder="http://192.168.1.140:3000">
-          <label class="form-label mb-1">Severity <span class="small text-body-secondary">(empty = all)</span></label>
-          <div class="d-flex flex-wrap gap-2 mb-2" id="nuSev">
+          <input class="form-control mb-3" id="nuTarget" placeholder="http://192.168.1.140:3000">
+
+          <label class="form-label mb-1">Scan Profile</label>
+          <div class="btn-group w-100 mb-3" role="group">
+            <input type="radio" class="btn-check" name="nuProfile" id="np-quick" value="quick" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="np-quick">Quick</label>
+            <input type="radio" class="btn-check" name="nuProfile" id="np-standard" value="standard" autocomplete="off" checked>
+            <label class="btn btn-outline-secondary" for="np-standard">Standard</label>
+            <input type="radio" class="btn-check" name="nuProfile" id="np-comprehensive" value="comprehensive" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="np-comprehensive">Comprehensive</label>
+          </div>
+
+          <label class="form-label mb-1">Severity Filter <span class="small text-body-secondary">(empty = all)</span></label>
+          <div class="d-flex flex-wrap gap-2 mb-3" id="nuSev">
             {% for s in ['critical','high','medium','low','info'] %}
             <div class="form-check"><input class="form-check-input nuSev" type="checkbox" value="{{ s }}" id="nus-{{ s }}"><label class="form-check-label small text-capitalize" for="nus-{{ s }}">{{ s }}</label></div>
             {% endfor %}
           </div>
-          <label class="form-label" for="nuTags">Tags <span class="small text-body-secondary">(optional, comma-separated)</span></label>
-          <input class="form-control mb-1" id="nuTags" placeholder="cve,exposure,misconfig">
-          <div class="form-text mb-3">Rate, timeout and concurrency defaults: <a href="/settings">Settings</a> &rarr; Nuclei.</div>
-          <button class="btn btn-primary w-100" type="submit" id="nuGo">Start scan</button>
+
+          <label class="form-label mb-1">Template Categories</label>
+          <div class="row row-cols-2 g-1 mb-3" id="nuCats">
+            {% for key, lbl in {'cve':'CVE','misconfig':'Misconfiguration','exposure':'Exposure','tech':'Technology Detection','ssl':'SSL/TLS','headers':'Security Headers','disclosure':'Information Disclosure','dns':'DNS Security','cloud':'Cloud Configuration','edb':'Known Vulnerabilities','api':'API Security'} %}
+            <div class="col"><div class="form-check"><input class="form-check-input nuCat" type="checkbox" value="{{ key }}" id="nc-{{ key }}"><label class="form-check-label small" for="nc-{{ key }}">{{ lbl }}</label></div></div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label small" for="nuTags">Additional tags</label><input class="form-control form-control-sm" id="nuTags" placeholder="takeover,fuzz"></div>
+            <div class="col-6"><label class="form-label small" for="nuEtags">Exclude tags</label><input class="form-control form-control-sm" id="nuEtags" placeholder="dos,intrusive"></div>
+          </div>
+
+          <label class="form-label mb-1">Protocols <span class="small text-body-secondary">(empty = all template types)</span></label>
+          <div class="d-flex flex-wrap gap-2 mb-2" id="nuProt">
+            {% for p in ['http','dns','ssl','tcp','headless','websocket','whois'] %}
+            <div class="form-check"><input class="form-check-input nuProt" type="checkbox" value="{{ p }}" id="npr-{{ p }}"{{ p == 'http' ? ' checked' : '' }}><label class="form-check-label small text-uppercase" for="npr-{{ p }}">{{ p }}</label></div>
+            {% endfor %}
+          </div>
+          <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="nuAs"><label class="form-check-label" for="nuAs">Technology-based automatic scan <span class="mono small text-body-secondary">-as</span></label></div>
+
+          <div class="accordion accordion-flush mb-3" id="nuAdvAcc">
+            <div class="accordion-item">
+              <h3 class="accordion-header"><button class="accordion-button collapsed px-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#nuAdv">Advanced &amp; Security Settings</button></h3>
+              <div id="nuAdv" class="accordion-collapse collapse" data-bs-parent="#nuAdvAcc"><div class="accordion-body px-0">
+                <div class="row g-2">
+                  <div class="col-6 col-md-4"><label class="form-label small" for="nuRl">Rate /s <span class="mono text-body-secondary">-rl</span></label><input class="form-control form-control-sm" id="nuRl" type="number" min="1" max="1000" value="150"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="nuC">Concurrency <span class="mono text-body-secondary">-c</span></label><input class="form-control form-control-sm" id="nuC" type="number" min="1" max="100" value="25"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="nuBs">Bulk size <span class="mono text-body-secondary">-bs</span></label><input class="form-control form-control-sm" id="nuBs" type="number" min="1" max="100" value="25"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="nuTo">Timeout (s) <span class="mono text-body-secondary">-timeout</span></label><input class="form-control form-control-sm" id="nuTo" type="number" min="1" max="60" value="10"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="nuRetries">Retries <span class="mono text-body-secondary">-retries</span></label><input class="form-control form-control-sm" id="nuRetries" type="number" min="0" max="5" value="1"></div>
+                  <div class="col-12"><label class="form-label small" for="nuHeaders">Custom Headers <span class="mono text-body-secondary">-H</span> <span class="text-body-secondary">(one per line)</span></label><textarea class="form-control form-control-sm mono" id="nuHeaders" rows="2" placeholder="Authorization: Bearer ..."></textarea></div>
+                  <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="nuDut"><label class="form-check-label" for="nuDut">Require signed templates <span class="mono small text-body-secondary">-dut</span></label></div></div>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">Generated CLI Command</span>
+            <button type="button" class="btn btn-sm btn-link ms-auto py-0" id="nuCopy">Copy</button></div>
+          <pre class="code small p-2 mb-3" id="nuCli" style="white-space:pre-wrap;word-break:break-all"></pre>
+
+          <button class="btn btn-primary w-100" type="submit" id="nuGo">Start Nuclei Scan</button>
         </form>
       </div>
     </div>
     <div class="card">
       <div class="card-header d-flex align-items-center">History <span class="badge text-bg-light border ms-2" id="nuRunsCount"></span></div>
-      <div class="card-body p-0" style="max-height:60vh;overflow:auto"><ul class="list-group list-group-flush small" id="nuRuns"></ul></div>
+      <div class="card-body p-0" style="max-height:45vh;overflow:auto"><ul class="list-group list-group-flush small" id="nuRuns"></ul></div>
     </div>
   </div>
-  <div class="col-xl-8">
+  <div class="col-xl-7">
     <div class="card">
       <div class="card-header d-flex align-items-center">Findings <span id="nuState" class="ms-2"></span>
         <a href="#" class="small ms-2 d-none" id="nuLogOpen">Log &#8599;</a>
@@ -36,10 +87,10 @@
           <button class="btn btn-sm btn-outline-danger" id="nuCancel" disabled>Cancel</button></div>
       </div>
       <div class="card-body">
-        <div class="d-flex flex-wrap gap-3 mb-2" id="nuStats"></div>
-        <div class="table-responsive" style="max-height:60vh;overflow:auto"><table class="table table-sm table-hover align-middle mb-0">
-          <thead class="position-sticky top-0"><tr><th>Severity</th><th>Name</th><th>Template</th><th>Matched at</th></tr></thead>
-          <tbody id="nuResults"><tr><td colspan="4" class="empty px-3">Start a scan to list findings.</td></tr></tbody>
+        <div class="row g-2 mb-3" id="nuCards"></div>
+        <div class="table-responsive" style="max-height:62vh;overflow:auto"><table class="table table-sm table-hover align-middle mb-0">
+          <thead class="position-sticky top-0"><tr><th>Severity</th><th>Name</th><th>Template</th><th>Type</th><th>Matched at</th></tr></thead>
+          <tbody id="nuResults"><tr><td colspan="5" class="empty px-3">Start a scan to list findings.</td></tr></tbody>
         </table></div>
       </div>
     </div>

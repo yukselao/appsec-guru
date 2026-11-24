@@ -104,6 +104,8 @@ services:
       RECON_NUCLEI_RATE_LIMIT: ${recon_nuclei_rate_limit:-}
       RECON_NUCLEI_TIMEOUT: ${recon_nuclei_timeout:-}
       RECON_NUCLEI_CONCURRENCY: ${recon_nuclei_concurrency:-}
+      RECON_NUCLEI_BULK_SIZE: ${recon_nuclei_bulk_size:-}
+      RECON_NUCLEI_RETRIES: ${recon_nuclei_retries:-}
       RECON_NUCLEI_STAGE_TIMEOUT: ${recon_nuclei_stage_timeout:-}
       RECON_KATANA_DEPTH: ${recon_katana_depth:-}
       RECON_KATANA_CONCURRENCY: ${recon_katana_concurrency:-}

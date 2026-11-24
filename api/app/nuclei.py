@@ -22,6 +22,15 @@ URL_RX = re.compile(r"^https?://[\w.\-]+(:\d+)?(/[^\s]*)?$", re.I)
 ANSI_RX = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 SEVERITIES = ("info", "low", "medium", "high", "critical")
 TAGS_RX = re.compile(r"^[A-Za-z0-9 ,_\-]{0,200}$")
+HEADER_RX = re.compile(r"^[A-Za-z0-9\-]+:\s?.+$")
+PROTOCOLS = ("http", "dns", "ssl", "tcp", "headless", "websocket", "whois")
+# UI template-category -> nuclei tag(s). The CLI preview always shows the exact
+# -tags value, so a category that matches few templates is visible.
+CATEGORY_TAGS = {
+    "cve": "cve", "misconfig": "misconfig", "exposure": "exposure", "tech": "tech",
+    "ssl": "ssl", "headers": "headers", "disclosure": "disclosure", "dns": "dns",
+    "cloud": "cloud", "edb": "edb", "api": "api",
+}
 LOG_MAX = 4000
 LOG_RUNS = 25
 _active = {}
@@ -103,34 +112,67 @@ def _clean_url(raw):
     return u
 
 
-def _argv(url, opts):
-    """Build the whole nuclei argv. Only whitelisted flags; user strings are
-    only ever flag VALUES. -jsonl/-no-color are forced by the container."""
-    argv = ["-u", url,
-            "-rate-limit", str(opts["rate_limit"]),
-            "-timeout", str(opts["timeout"]),
-            "-c", str(opts["concurrency"]),
-            "-duc", "-ni"]   # no auto-update, no interactsh (offline/lab)
-    sev = [x for x in opts.get("severity") or [] if x in SEVERITIES]
+def _argv(url, o):
+    """Build the whole nuclei argv. Only whitelisted flags; user strings are only
+    ever flag VALUES. -jsonl/-no-color are forced by the container."""
+    argv = ["-u", url, "-rl", str(o["rate_limit"]), "-timeout", str(o["timeout"]),
+            "-c", str(o["concurrency"]), "-bs", str(o["bulk_size"]), "-retries", str(o["retries"]),
+            "-duc", "-ni", "-stats", "-stats-interval", "15"]   # no auto-update, no OAST; periodic stats
+    sev = [x for x in o.get("severity") or [] if x in SEVERITIES]
     if sev and len(sev) < len(SEVERITIES):
-        argv += ["-severity", ",".join(sev)]
-    tags = (opts.get("tags") or "").strip()
-    if tags:
-        argv += ["-tags", tags]
+        argv += ["-s", ",".join(sev)]
+    if o.get("tags_resolved"):
+        argv += ["-tags", ",".join(o["tags_resolved"])]
+    if o.get("exclude_tags"):
+        argv += ["-etags", o["exclude_tags"]]
+    prot = [p for p in o.get("protocols") or [] if p in PROTOCOLS]
+    if prot:
+        argv += ["-pt", ",".join(prot)]
+    if o.get("automatic_scan"):
+        argv += ["-as"]
+    if o.get("disable_unsigned"):
+        argv += ["-dut"]
+    for h in o.get("headers") or []:
+        argv += ["-H", h]
     return argv
 
 
 def start(params, client_ip=None):
     url = _clean_url(params.get("target"))
-    tags = (params.get("tags") or "").strip()
-    if not TAGS_RX.match(tags):
-        raise ValueError("tags may use letters, digits, comma, dash and underscore only")
     sev = [x for x in (params.get("severity") or []) if x in SEVERITIES]
+    protocols = [p for p in (params.get("protocols") or []) if p in PROTOCOLS]
+    cats = [c for c in (params.get("categories") or []) if c in CATEGORY_TAGS]
+    free = (params.get("tags") or "").strip()
+    exclude_tags = (params.get("exclude_tags") or "").strip()
+    for name, v in (("tags", free), ("exclude tags", exclude_tags)):
+        if v and not TAGS_RX.match(v):
+            raise ValueError("{} may use letters, digits, comma, dash and underscore only".format(name))
+    tags_resolved = []
+    for c in cats:
+        for t in CATEGORY_TAGS[c].split(","):
+            if t not in tags_resolved:
+                tags_resolved.append(t)
+    for t in [x.strip() for x in free.split(",") if x.strip()]:
+        if t not in tags_resolved:
+            tags_resolved.append(t)
+    headers = []
+    for line in (params.get("headers") or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if not HEADER_RX.match(line):
+            raise ValueError("headers must be 'Name: value', one per line")
+        headers.append(line)
     opts = {"rate_limit": st.get_int("recon.nuclei_rate_limit", _ov(params, "rate_limit", "recon.nuclei_rate_limit")),
             "timeout": st.get_int("recon.nuclei_timeout", _ov(params, "timeout", "recon.nuclei_timeout")),
             "concurrency": st.get_int("recon.nuclei_concurrency", _ov(params, "concurrency", "recon.nuclei_concurrency")),
+            "bulk_size": st.get_int("recon.nuclei_bulk_size", _ov(params, "bulk_size", "recon.nuclei_bulk_size")),
+            "retries": st.get_int("recon.nuclei_retries", _ov(params, "retries", "recon.nuclei_retries")),
             "stage_timeout": st.get_int("recon.nuclei_stage_timeout"),
-            "severity": sev, "tags": tags}
+            "severity": sev, "categories": cats, "tags": free, "tags_resolved": tags_resolved,
+            "exclude_tags": exclude_tags, "protocols": protocols,
+            "automatic_scan": bool(params.get("automatic_scan")), "disable_unsigned": bool(params.get("disable_unsigned")),
+            "headers": headers, "profile": (params.get("profile") or "")[:20]}
     with session_scope() as s:
         r = NucleiRun(target=url, status="pending", options=opts)
         s.add(r)
