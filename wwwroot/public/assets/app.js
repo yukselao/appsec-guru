@@ -92,6 +92,34 @@
       clear: () => { if (idOf()) history.replaceState(null, '', '/' + page); }};
   };
   WT.time = iso => iso ? new Date(iso).toLocaleTimeString('en-GB') : '';
+  // Live-log modal for the Open Source Tools: polls /api/<tool>/<id>/log?offset=
+  // and appends new lines. `o` = {modal, view, state, scroll, title, lineClass}.
+  WT.liveLog = function (tool, o) {
+    let id = null, off = 0, timer = null, modal = null;
+    const cls = o.lineClass || (() => '');
+    function poll() {
+      const cur = id;
+      WT.get(`/${tool}/${cur}/log?offset=${off}`).then(r => {
+        if (id !== cur) return;
+        if (r.lines.length) {
+          const v = $(o.view)[0];
+          v.insertAdjacentHTML('beforeend', r.lines.map(l => `<div class="${cls(l)}">${WT.esc(l)}</div>`).join(''));
+          off = r.offset;
+          if ($(o.scroll).prop('checked')) v.scrollTop = v.scrollHeight;
+        }
+        if (!off && !r.has_log) $(o.view).html('<div class="text-body-secondary">No log (the run is not active, or it expired after an API restart).</div>');
+        $(o.state).attr('class', 'badge text-bg-' + (r.active ? 'success' : 'secondary')).text(r.active ? 'live' : 'ended');
+        if (!r.active) { clearInterval(timer); timer = null; }
+      }).catch(() => {});
+    }
+    $(o.modal).on('hidden.bs.modal', () => { clearInterval(timer); timer = null; id = null; });
+    return {open(runId, title) {
+      id = runId; off = 0; $(o.view).empty();
+      if (o.title) $(o.title).text(title || ('#' + runId));
+      modal = modal || new bootstrap.Modal(o.modal); modal.show();
+      clearInterval(timer); poll(); timer = setInterval(poll, 1000);
+    }};
+  };
   WT.lvl = l => { const m = l.match(/\[(DEBUG|INFO|NOTICE|WARN|ERROR|FATAL|TRACE)\]/); return m ? ({FATAL: 'ERROR', TRACE: 'DEBUG'}[m[1]] || m[1]) : 'INFO'; };
   WT.logHtml = function (line, rx) {
     let t = WT.esc(line.replace(/ \[scanUuid=[0-9a-f-]+\]/, ''));

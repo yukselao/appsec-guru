@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+# Commix (OS command-injection detection) over the standard TCP line protocol
+# (socat). Built from the upstream source. Part of the deterministic OSS-tool
+# contract. Runs in detection mode only (the api never passes os-shell/os-cmd or
+# file flags).
+FROM python:3.12-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git socat ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 https://github.com/commixproject/commix /opt/commix
+COPY run-commix.sh /usr/local/bin/run.sh
+COPY serve-commix.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+ENTRYPOINT ["/usr/local/bin/serve.sh"]

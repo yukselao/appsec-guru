@@ -15,13 +15,14 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
+from app import nuclei, katana, sqlmap, commix
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -48,6 +49,10 @@ try:
     fuzz.mark_orphans()
     recon.mark_orphans()
     portscan.mark_orphans()
+    nuclei.mark_orphans()
+    katana.mark_orphans()
+    sqlmap.mark_orphans()
+    commix.mark_orphans()
     runs.resume_orphans()
     sast.mark_orphans()
     was_scan.start_scheduler()
@@ -1134,6 +1139,190 @@ def portscan_delete(run_id: int, req: Request):
     portscan.drop_log(run_id)
     with session_scope() as s:
         s.execute(delete(PortScanRun).where(PortScanRun.id == run_id))
+    return {"deleted": run_id}
+
+
+# ---------------------------------------------------------------- Nuclei
+@router.get("/nuclei")
+def nuclei_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [nuclei.summary(r) for r in s.execute(select(NucleiRun).order_by(desc(NucleiRun.id)).limit(limit)).scalars()]}
+
+
+@router.post("/nuclei")
+def nuclei_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": nuclei.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/nuclei/{run_id}")
+def nuclei_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(NucleiRun, run_id)
+        if not r:
+            raise HTTPException(404, "run not found")
+        return nuclei.row(r)
+
+
+@router.get("/nuclei/{run_id}/log")
+def nuclei_log(run_id: int, offset: int = 0):
+    return nuclei.get_log(run_id, offset)
+
+
+@router.post("/nuclei/{run_id}/cancel")
+def nuclei_cancel(run_id: int, req: Request):
+    ok = nuclei.cancel(run_id)
+    st.audit("nuclei_run_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/nuclei/{run_id}")
+def nuclei_delete(run_id: int, req: Request):
+    if nuclei.is_active(run_id):
+        raise HTTPException(409, "cancel the running run first")
+    nuclei.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(NucleiRun).where(NucleiRun.id == run_id))
+    return {"deleted": run_id}
+
+
+# ---------------------------------------------------------------- Katana
+@router.get("/katana")
+def katana_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [katana.summary(r) for r in s.execute(select(KatanaRun).order_by(desc(KatanaRun.id)).limit(limit)).scalars()]}
+
+
+@router.post("/katana")
+def katana_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": katana.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/katana/{run_id}")
+def katana_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(KatanaRun, run_id)
+        if not r:
+            raise HTTPException(404, "run not found")
+        return katana.row(r)
+
+
+@router.get("/katana/{run_id}/log")
+def katana_log(run_id: int, offset: int = 0):
+    return katana.get_log(run_id, offset)
+
+
+@router.post("/katana/{run_id}/cancel")
+def katana_cancel(run_id: int, req: Request):
+    ok = katana.cancel(run_id)
+    st.audit("katana_run_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/katana/{run_id}")
+def katana_delete(run_id: int, req: Request):
+    if katana.is_active(run_id):
+        raise HTTPException(409, "cancel the running run first")
+    katana.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(KatanaRun).where(KatanaRun.id == run_id))
+    return {"deleted": run_id}
+
+
+# ---------------------------------------------------------------- SQLMap
+@router.get("/sqlmap")
+def sqlmap_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [sqlmap.summary(r) for r in s.execute(select(SqlmapRun).order_by(desc(SqlmapRun.id)).limit(limit)).scalars()]}
+
+
+@router.post("/sqlmap")
+def sqlmap_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": sqlmap.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/sqlmap/{run_id}")
+def sqlmap_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(SqlmapRun, run_id)
+        if not r:
+            raise HTTPException(404, "run not found")
+        return sqlmap.row(r)
+
+
+@router.get("/sqlmap/{run_id}/log")
+def sqlmap_log(run_id: int, offset: int = 0):
+    return sqlmap.get_log(run_id, offset)
+
+
+@router.post("/sqlmap/{run_id}/cancel")
+def sqlmap_cancel(run_id: int, req: Request):
+    ok = sqlmap.cancel(run_id)
+    st.audit("sqlmap_run_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/sqlmap/{run_id}")
+def sqlmap_delete(run_id: int, req: Request):
+    if sqlmap.is_active(run_id):
+        raise HTTPException(409, "cancel the running run first")
+    sqlmap.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(SqlmapRun).where(SqlmapRun.id == run_id))
+    return {"deleted": run_id}
+
+
+# ---------------------------------------------------------------- Commix
+@router.get("/commix")
+def commix_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [commix.summary(r) for r in s.execute(select(CommixRun).order_by(desc(CommixRun.id)).limit(limit)).scalars()]}
+
+
+@router.post("/commix")
+def commix_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": commix.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/commix/{run_id}")
+def commix_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(CommixRun, run_id)
+        if not r:
+            raise HTTPException(404, "run not found")
+        return commix.row(r)
+
+
+@router.get("/commix/{run_id}/log")
+def commix_log(run_id: int, offset: int = 0):
+    return commix.get_log(run_id, offset)
+
+
+@router.post("/commix/{run_id}/cancel")
+def commix_cancel(run_id: int, req: Request):
+    ok = commix.cancel(run_id)
+    st.audit("commix_run_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/commix/{run_id}")
+def commix_delete(run_id: int, req: Request):
+    if commix.is_active(run_id):
+        raise HTTPException(409, "cancel the running run first")
+    commix.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(CommixRun).where(CommixRun.id == run_id))
     return {"deleted": run_id}
 
 

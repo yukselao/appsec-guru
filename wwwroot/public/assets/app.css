@@ -256,3 +256,9 @@ body.modal-open .wt-ai-fab { display: none; }
   .wizard-layout .wizard-steps { flex-direction: row; flex-wrap: wrap; width: 100%; position: static; }
   .wizard-layout .wizard-steps li { flex: 1 1 140px; }
 }
+
+/* Open Source Tools live-log modal (Nuclei / Katana / SQLMap / Commix) */
+.oss-log { font-size: .82rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.oss-log .l-DEBUG { color: #7d8590; }
+.oss-log .l-ERROR { color: #d9534f; }
+.oss-log .l-json { color: #2f9c8b; }

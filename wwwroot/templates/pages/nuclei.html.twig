@@ -1,0 +1,57 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header">New Nuclei scan</div>
+      <div class="card-body">
+        <p class="small text-body-secondary">Template-based vulnerability &amp; CVE discovery with <b>Nuclei</b>, in its own container. Lab use only &mdash; scan hosts you are authorised to test.</p>
+        <form id="nuForm">
+          <label class="form-label" for="nuTarget">Target URL</label>
+          <input class="form-control mb-2" id="nuTarget" placeholder="http://192.168.1.140:3000">
+          <label class="form-label mb-1">Severity <span class="small text-body-secondary">(empty = all)</span></label>
+          <div class="d-flex flex-wrap gap-2 mb-2" id="nuSev">
+            {% for s in ['critical','high','medium','low','info'] %}
+            <div class="form-check"><input class="form-check-input nuSev" type="checkbox" value="{{ s }}" id="nus-{{ s }}"><label class="form-check-label small text-capitalize" for="nus-{{ s }}">{{ s }}</label></div>
+            {% endfor %}
+          </div>
+          <label class="form-label" for="nuTags">Tags <span class="small text-body-secondary">(optional, comma-separated)</span></label>
+          <input class="form-control mb-1" id="nuTags" placeholder="cve,exposure,misconfig">
+          <div class="form-text mb-3">Rate, timeout and concurrency defaults: <a href="/settings">Settings</a> &rarr; Nuclei.</div>
+          <button class="btn btn-primary w-100" type="submit" id="nuGo">Start scan</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex align-items-center">History <span class="badge text-bg-light border ms-2" id="nuRunsCount"></span></div>
+      <div class="card-body p-0" style="max-height:60vh;overflow:auto"><ul class="list-group list-group-flush small" id="nuRuns"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Findings <span id="nuState" class="ms-2"></span>
+        <a href="#" class="small ms-2 d-none" id="nuLogOpen">Log &#8599;</a>
+        <div class="ms-auto d-flex gap-2"><input class="form-control form-control-sm" style="max-width:200px" id="nuSearch" placeholder="filter">
+          <button class="btn btn-sm btn-outline-secondary" id="nuExport" disabled>Export</button>
+          <button class="btn btn-sm btn-outline-danger" id="nuCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-3 mb-2" id="nuStats"></div>
+        <div class="table-responsive" style="max-height:60vh;overflow:auto"><table class="table table-sm table-hover align-middle mb-0">
+          <thead class="position-sticky top-0"><tr><th>Severity</th><th>Name</th><th>Template</th><th>Matched at</th></tr></thead>
+          <tbody id="nuResults"><tr><td colspan="4" class="empty px-3">Start a scan to list findings.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="nuLogModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Live Nuclei log <span class="mono small text-body-secondary ms-1" id="nuLogTitle"></span></h5>
+    <span class="badge text-bg-secondary ms-2" id="nuLogState">idle</span>
+    <div class="form-check form-switch ms-auto me-2 mb-0"><input class="form-check-input" type="checkbox" id="nuLogScroll" checked><label class="form-check-label small" for="nuLogScroll">Follow</label></div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body p-0"><pre class="oss-log code mb-0 p-3" id="nuLogView" style="min-height:50vh;max-height:70vh;overflow:auto"></pre></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/nuclei.js') }}"></script>{% endblock %}

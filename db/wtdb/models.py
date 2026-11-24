@@ -272,3 +272,59 @@ class PortScanRun(Base):
     stats = Column(JSONB, nullable=False, server_default="{}")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     finished_at = Column(DateTime(timezone=True))
+
+
+class NucleiRun(Base):
+    """A Nuclei run (CVE / template vulnerability discovery) against a target URL."""
+    __tablename__ = "nuclei_runs"
+    id = Column(Integer, primary_key=True)
+    target = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="[]")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
+
+
+class KatanaRun(Base):
+    """A Katana crawl (endpoint discovery) of a target URL."""
+    __tablename__ = "katana_runs"
+    id = Column(Integer, primary_key=True)
+    target = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="[]")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
+
+
+class SqlmapRun(Base):
+    """A SQLMap run (SQL-injection detection) against a target URL."""
+    __tablename__ = "sqlmap_runs"
+    id = Column(Integer, primary_key=True)
+    target = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="[]")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
+
+
+class CommixRun(Base):
+    """A Commix run (OS command-injection detection) against a target URL."""
+    __tablename__ = "commix_runs"
+    id = Column(Integer, primary_key=True)
+    target = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="[]")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))

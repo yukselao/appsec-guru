@@ -66,6 +66,10 @@ services:
       RECON_DNSX: recon-dnsx:7002
       RECON_HTTPX: recon-httpx:7003
       RECON_RUSTSCAN: recon-rustscan:7004
+      RECON_NUCLEI: recon-nuclei:7005
+      RECON_KATANA: recon-katana:7006
+      RECON_SQLMAP: recon-sqlmap:7007
+      RECON_COMMIX: recon-commix:7008
       REPORT_DIR: /var/log/was-troubleshooter/reports
       WORDLIST_DIR: /var/lib/was-troubleshooter/wordlists
       TZ: ${tz:-Europe/Istanbul}
@@ -97,6 +101,20 @@ services:
       RECON_STAGE_TIMEOUT: ${recon_stage_timeout:-}
       RECON_RUSTSCAN_BATCH: ${recon_rustscan_batch:-}
       RECON_RUSTSCAN_TIMEOUT: ${recon_rustscan_timeout:-}
+      RECON_NUCLEI_RATE_LIMIT: ${recon_nuclei_rate_limit:-}
+      RECON_NUCLEI_TIMEOUT: ${recon_nuclei_timeout:-}
+      RECON_NUCLEI_CONCURRENCY: ${recon_nuclei_concurrency:-}
+      RECON_NUCLEI_STAGE_TIMEOUT: ${recon_nuclei_stage_timeout:-}
+      RECON_KATANA_DEPTH: ${recon_katana_depth:-}
+      RECON_KATANA_CONCURRENCY: ${recon_katana_concurrency:-}
+      RECON_KATANA_RATE_LIMIT: ${recon_katana_rate_limit:-}
+      RECON_KATANA_STAGE_TIMEOUT: ${recon_katana_stage_timeout:-}
+      RECON_SQLMAP_LEVEL: ${recon_sqlmap_level:-}
+      RECON_SQLMAP_RISK: ${recon_sqlmap_risk:-}
+      RECON_SQLMAP_THREADS: ${recon_sqlmap_threads:-}
+      RECON_SQLMAP_STAGE_TIMEOUT: ${recon_sqlmap_stage_timeout:-}
+      RECON_COMMIX_LEVEL: ${recon_commix_level:-}
+      RECON_COMMIX_STAGE_TIMEOUT: ${recon_commix_stage_timeout:-}
     volumes:
       - ./api:/app:ro
       - ./db:/db:ro
@@ -171,6 +189,30 @@ services:
   recon-rustscan:
     build: {context: ./docker/recon, dockerfile: Dockerfile.rustscan}
     image: was-troubleshooter-rustscan
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+
+  recon-nuclei:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.nuclei}
+    image: was-troubleshooter-nuclei
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+
+  recon-katana:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.katana}
+    image: was-troubleshooter-katana
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+
+  recon-sqlmap:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.sqlmap}
+    image: was-troubleshooter-sqlmap
+    networks: [wastroubleshooter]
+    restart: unless-stopped
+
+  recon-commix:
+    build: {context: ./docker/recon, dockerfile: Dockerfile.commix}
+    image: was-troubleshooter-commix
     networks: [wastroubleshooter]
     restart: unless-stopped
 

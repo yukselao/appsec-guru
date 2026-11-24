@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1
+# Nuclei (CVE / template vulnerability discovery) over the standard TCP line
+# protocol (socat). The template set is baked in at build time so runs are
+# deterministic and work offline. Part of the deterministic OSS-tool contract.
+FROM projectdiscovery/nuclei:latest
+USER root
+RUN apk add --no-cache socat
+# Pin the template set into the image (deterministic, no network at run time).
+RUN nuclei -update-templates || true
+COPY run-nuclei.sh /usr/local/bin/run.sh
+COPY serve-nuclei.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+ENTRYPOINT ["/usr/local/bin/serve.sh"]

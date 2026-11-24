@@ -23,6 +23,20 @@ forward to an `EXEC` child). Output is one record per line — plain text
 | dnsx | 7002 | host list | JSON per host (A/AAAA/CNAME/MX/NS/TXT) |
 | httpx | 7003 | optional `__OPTS__` line, host list | JSON per host (status, title, tech) |
 | RustScan | 7004 | `<target> [ports]` | `host -> [open ports]` |
+| Nuclei | 7005 | one argv token per line | JSONL findings (merged stderr) |
+| Katana | 7006 | one argv token per line | JSONL endpoints (merged stderr) |
+| SQLMap | 7007 | one argv token per line | verbose log (merged stderr) |
+| Commix | 7008 | one argv token per line | verbose log (merged stderr) |
+
+The offensive tools (Nuclei/Katana/SQLMap/Commix) use a **one-argument-per-line**
+framing: the api sends the whole, already-validated argv — one argument per line —
+then `__END__`; `run-<tool>.sh` reads each line as a literal argument into `"$@"`
+and `exec`s the tool (no `eval`, no word-splitting), so URLs, cookies and POST
+data with special characters are safe. The container forces the non-interactive /
+machine-output flags (`-jsonl`, `--batch`) and merges stderr so progress shows in
+the live log. The api is responsible for all safety: it validates the target URL
+and only ever emits a fixed whitelist of flags, with user strings used only as
+flag *values* — never as flag names, and never exploitation/file/shell flags.
 
 httpx also accepts one optional first line with numeric options:
 `__OPTS__ timeout=10 threads=50 rate_limit=150 retries=0 max=905`. Unknown keys

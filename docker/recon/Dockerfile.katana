@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+# Katana (web crawler / endpoint discovery) over the standard TCP line protocol
+# (socat). Standard HTTP crawling (no headless browser). Part of the
+# deterministic OSS-tool contract.
+FROM projectdiscovery/katana:latest
+USER root
+RUN apk add --no-cache socat
+COPY run-katana.sh /usr/local/bin/run.sh
+COPY serve-katana.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+ENTRYPOINT ["/usr/local/bin/serve.sh"]

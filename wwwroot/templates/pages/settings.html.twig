@@ -22,6 +22,10 @@
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAi" type="button">AI (Ollama)</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tRecon" type="button">Subdomain Discovery</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tPorts" type="button">Port Scan</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tNuclei" type="button">Nuclei</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tKatana" type="button">Katana</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tSqlmap" type="button">SQLMap</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tCommix" type="button">Commix</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAudit" type="button" id="tAuditBtn">Audit</button></li>
 </ul>
 <div class="tab-content">
@@ -85,6 +89,51 @@
     <div class="alert alert-light border small">New values apply to the next port scan. RustScan then runs nmap on the open ports for service names; both are shown live in the scan log.</div>
     <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="portscan">Save</button>
       <button class="btn btn-outline-warning ms-auto" data-reset="portscan">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tNuclei" data-section="nuclei">
+    <div class="card mb-3"><div class="card-header">Nuclei defaults &amp; limits</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.nuclei_rate_limit', 'Requests per second (max)', 'number', 'Default 150, 1 to 1000.', 'col-md-3', 1, 1000) }}
+      {{ f.field('recon.nuclei_timeout', 'Request timeout (s)', 'number', 'Default 10, 1 to 60.', 'col-md-3', 1, 60) }}
+      {{ f.field('recon.nuclei_concurrency', 'Concurrency', 'number', 'Templates run in parallel. Default 25, 1 to 100.', 'col-md-3', 1, 100) }}
+      {{ f.field('recon.nuclei_stage_timeout', 'Scan time limit (s)', 'number', 'Longest a scan may run. Default 1800, 60 to 7200.', 'col-md-3', 60, 7200) }}
+    </div></div></div>
+    <div class="alert alert-light border small">Severity and tags are chosen per run in the Nuclei modal. Templates are baked into the container image.</div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="nuclei">Save</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="nuclei">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tKatana" data-section="katana">
+    <div class="card mb-3"><div class="card-header">Katana defaults &amp; limits</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.katana_depth', 'Crawl depth', 'number', 'Default 3, 1 to 10. A run can override this in the modal.', 'col-md-3', 1, 10) }}
+      {{ f.field('recon.katana_concurrency', 'Concurrency', 'number', 'Default 10, 1 to 50.', 'col-md-3', 1, 50) }}
+      {{ f.field('recon.katana_rate_limit', 'Requests per second (max)', 'number', 'Default 150, 1 to 1000.', 'col-md-3', 1, 1000) }}
+      {{ f.field('recon.katana_stage_timeout', 'Crawl time limit (s)', 'number', 'Default 900, 60 to 3600.', 'col-md-3', 60, 3600) }}
+    </div></div></div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="katana">Save</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="katana">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tSqlmap" data-section="sqlmap">
+    <div class="card mb-3"><div class="card-header">SQLMap defaults &amp; limits</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.sqlmap_level', 'Level', 'number', 'Depth of tests (1-5). Default 1.', 'col-md-3', 1, 5) }}
+      {{ f.field('recon.sqlmap_risk', 'Risk', 'number', 'Risk of tests (1-3). Default 1.', 'col-md-3', 1, 3) }}
+      {{ f.field('recon.sqlmap_threads', 'Threads', 'number', 'Default 1, 1 to 10.', 'col-md-3', 1, 10) }}
+      {{ f.field('recon.sqlmap_stage_timeout', 'Scan time limit (s)', 'number', 'Default 1800, 60 to 7200.', 'col-md-3', 60, 7200) }}
+    </div></div></div>
+    <div class="alert alert-light border small">Level, risk, technique and data/cookie are chosen per run in the SQLMap modal. SQLMap runs in detection/enumeration mode only.</div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="sqlmap">Save</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="sqlmap">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tCommix" data-section="commix">
+    <div class="card mb-3"><div class="card-header">Commix defaults &amp; limits</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.commix_level', 'Level', 'number', 'Depth of tests (1-3). Default 1.', 'col-md-6', 1, 3) }}
+      {{ f.field('recon.commix_stage_timeout', 'Scan time limit (s)', 'number', 'Default 1800, 60 to 7200.', 'col-md-6', 60, 7200) }}
+    </div></div></div>
+    <div class="alert alert-light border small">Technique and data/cookie are chosen per run in the Commix modal. Commix runs in detection mode only.</div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="commix">Save</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="commix">Revert to .env</button></div>
   </div>
 
   <div class="tab-pane fade" id="tAudit">

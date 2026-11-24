@@ -21,6 +21,10 @@
   'ports': '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h.01M7 12h.01M7 16h.01M11 8h6M11 12h6M11 16h6"/>',
   'wolf': '<path d="M12 3l2.5 3H18l-1 3 3 2-2.5 2.2.5 3.3-3.5-1L12 21l-4.5-2.5-3.5 1 .5-3.3L2 14l3-2-1-3h3.5L12 3z"/><circle cx="9.5" cy="12" r=".8" fill="currentColor"/><circle cx="14.5" cy="12" r=".8" fill="currentColor"/><path d="M10.5 15.5l1.5 1 1.5-1"/>',
   'shield': '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  'bug': '<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M8 11H4M8 15H4M16 11h4M16 15h4M12 3v4M9 6l-1-2M15 6l1-2M9 19l-1 2M15 19l1 2"/>',
+  'spider': '<circle cx="12" cy="12" r="3"/><path d="M12 9V4M9.5 10.5L6 7M14.5 10.5L18 7M9 12H3M15 12h6M9.5 13.5L6 17M14.5 13.5L18 17M12 15v5"/>',
+  'database': '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  'inject': '<path d="M14 3l7 7-3 3-7-7zM11 6l-7 7v4h4l7-7M9 14l1 1"/>',
 } -%}
 <svg class="ico {{ cls|default('') }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ paths[name]|default('')|raw }}</svg>
 {%- endmacro %}

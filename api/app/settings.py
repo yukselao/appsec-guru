@@ -53,6 +53,20 @@ FIELDS = {
     "recon.stage_timeout": ("900", False, "RECON_STAGE_TIMEOUT"),
     "recon.rustscan_batch": ("1000", False, "RECON_RUSTSCAN_BATCH"),
     "recon.rustscan_timeout": ("2500", False, "RECON_RUSTSCAN_TIMEOUT"),
+    "recon.nuclei_rate_limit": ("150", False, "RECON_NUCLEI_RATE_LIMIT"),
+    "recon.nuclei_timeout": ("10", False, "RECON_NUCLEI_TIMEOUT"),
+    "recon.nuclei_concurrency": ("25", False, "RECON_NUCLEI_CONCURRENCY"),
+    "recon.nuclei_stage_timeout": ("1800", False, "RECON_NUCLEI_STAGE_TIMEOUT"),
+    "recon.katana_depth": ("3", False, "RECON_KATANA_DEPTH"),
+    "recon.katana_concurrency": ("10", False, "RECON_KATANA_CONCURRENCY"),
+    "recon.katana_rate_limit": ("150", False, "RECON_KATANA_RATE_LIMIT"),
+    "recon.katana_stage_timeout": ("900", False, "RECON_KATANA_STAGE_TIMEOUT"),
+    "recon.sqlmap_level": ("1", False, "RECON_SQLMAP_LEVEL"),
+    "recon.sqlmap_risk": ("1", False, "RECON_SQLMAP_RISK"),
+    "recon.sqlmap_threads": ("1", False, "RECON_SQLMAP_THREADS"),
+    "recon.sqlmap_stage_timeout": ("1800", False, "RECON_SQLMAP_STAGE_TIMEOUT"),
+    "recon.commix_level": ("1", False, "RECON_COMMIX_LEVEL"),
+    "recon.commix_stage_timeout": ("1800", False, "RECON_COMMIX_STAGE_TIMEOUT"),
 }
 # key -> (min, max) of whole-number settings; checked on save and clamped on use
 INT_LIMITS = {
@@ -64,6 +78,20 @@ INT_LIMITS = {
     "recon.stage_timeout": (60, 3600),
     "recon.rustscan_batch": (100, 65535),
     "recon.rustscan_timeout": (500, 20000),
+    "recon.nuclei_rate_limit": (1, 1000),
+    "recon.nuclei_timeout": (1, 60),
+    "recon.nuclei_concurrency": (1, 100),
+    "recon.nuclei_stage_timeout": (60, 7200),
+    "recon.katana_depth": (1, 10),
+    "recon.katana_concurrency": (1, 50),
+    "recon.katana_rate_limit": (1, 1000),
+    "recon.katana_stage_timeout": (60, 3600),
+    "recon.sqlmap_level": (1, 5),
+    "recon.sqlmap_risk": (1, 3),
+    "recon.sqlmap_threads": (1, 10),
+    "recon.sqlmap_stage_timeout": (60, 7200),
+    "recon.commix_level": (1, 3),
+    "recon.commix_stage_timeout": (60, 7200),
 }
 SECRET_MASK = "__SET__"
 
