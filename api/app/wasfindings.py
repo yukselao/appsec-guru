@@ -1,11 +1,33 @@
 """Rich WAS finding details from Security Center: per-plugin output, URLs,
 CVE/CVSS and attachment references, for the offensive-security analysis."""
+import json
 import re
 
 from wastools.core import SCError
 
 PLUGIN_OUT_RX = re.compile(r"<plugin_output>(.*?)</plugin_output>", re.S)
 URL_RX = re.compile(r"https?://[^\s\"'<>]+")
+
+
+def _attachments(val):
+    """SC's WAS `attachment` field: a JSON string like
+    '[{"id":"1482","name":"screenshot.jpg"}]', a list, or a dict. -> [{id,name}]."""
+    if isinstance(val, str):
+        val = val.strip()
+        try:
+            val = json.loads(val) if val else []
+        except ValueError:
+            return []
+    if isinstance(val, dict):
+        val = [val]
+    out = []
+    for a in val if isinstance(val, list) else []:
+        if not isinstance(a, dict):
+            continue
+        aid = a.get("id") or a.get("attachmentID") or a.get("value")
+        if aid:
+            out.append({"id": str(aid), "name": a.get("name") or a.get("type") or "attachment"})
+    return out
 
 
 def _text(x, *keys):
@@ -20,7 +42,7 @@ def details(sc, rid, max_plugins=400):
     """Each finding with severity, family, affected URLs, plugin output text,
     CVE/CVSS and attachment ids."""
     q = {"type": "vuln", "sourceType": "individual", "scanID": str(rid), "view": "all",
-         "query": {"tool": "vulndetails", "type": "vuln", "startOffset": 0, "endOffset": max_plugins, "filters": []}}
+         "query": {"tool": "wasvulndetail", "type": "vuln", "startOffset": 0, "endOffset": max_plugins, "filters": []}}
     res = sc.post("analysis", q)
     by_plugin = {}
     for x in res.get("results", []):
@@ -30,11 +52,7 @@ def details(sc, rid, max_plugins=400):
         text = _text(x, "pluginText", "description")
         out = "\n".join(PLUGIN_OUT_RX.findall(text)) or ""
         urls = sorted(set(URL_RX.findall(out + " " + _text(x, "uri", "request"))))[:25]
-        att = x.get("attachment") or x.get("attachments") or []
-        if isinstance(att, dict):
-            att = [att]
-        atts = [{"id": str(a.get("id") or a.get("attachmentID") or a.get("value")), "name": a.get("name") or a.get("type")}
-                for a in att if isinstance(a, dict) and (a.get("id") or a.get("attachmentID") or a.get("value"))]
+        atts = _attachments(x.get("attachment") or x.get("attachments"))
         f = by_plugin.setdefault(pid, {
             "plugin_id": pid, "name": x.get("name"), "severity": sev.get("name"), "severity_id": int(sev.get("id") or 0),
             "family": fam.get("name") if isinstance(fam, dict) else fam,
@@ -58,7 +76,7 @@ def details(sc, rid, max_plugins=400):
 
 def attachment(sc, rid, att_id):
     """Download one attachment; returns (content_type, bytes). Images stay bytes."""
-    r = sc.call("POST", "scanResult/{}/attachment/{}".format(rid, att_id), body={}, raw=True)
+    r = sc.call("GET", "scanResult/{}/attachment/{}".format(rid, att_id), raw=True)
     ctype = r.headers.get("Content-Type", "application/octet-stream")
     return ctype, r.read()
 
@@ -92,7 +110,7 @@ def plugin_details(sc, rid, plugin_id, limit=500):
     """Everything Security Center returns for one plugin in one scan result:
     the plugin's reference data once, plus one entry per instance."""
     q = {"type": "vuln", "sourceType": "individual", "scanID": str(rid), "view": "all",
-         "query": {"tool": "vulndetails", "type": "vuln", "startOffset": 0, "endOffset": limit,
+         "query": {"tool": "wasvulndetail", "type": "vuln", "startOffset": 0, "endOffset": limit,
                    "filters": [{"filterName": "pluginID", "operator": "=", "value": str(plugin_id)}]}}
     rows = sc.post("analysis", q).get("results", [])
     if not rows:
@@ -116,11 +134,7 @@ def plugin_details(sc, rid, plugin_id, limit=500):
     for i, r in enumerate(rows, 1):
         text = r.get("pluginText") or ""
         out = "\n".join(PLUGIN_OUT_RX.findall(text)) or text
-        att = r.get("attachment") or r.get("attachments") or []
-        if isinstance(att, dict):
-            att = [att]
-        atts = [{"id": str(a.get("id") or a.get("attachmentID") or a.get("value")), "name": a.get("name") or a.get("type") or "attachment"}
-                for a in att if isinstance(a, dict) and (a.get("id") or a.get("attachmentID") or a.get("value"))] if isinstance(att, list) else []
+        atts = _attachments(r.get("attachment") or r.get("attachments"))
         instances.append({
             "n": i, "vuln_uuid": r.get("vulnUUID") or "", "host": r.get("dnsName") or r.get("ip") or "",
             "ip": r.get("ip") or "", "port": r.get("port") or "", "protocol": r.get("protocol") or "",
