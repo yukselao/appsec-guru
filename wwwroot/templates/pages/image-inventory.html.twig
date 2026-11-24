@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <div class="text-body-secondary small">Every container image scanned with Trivy, with its latest security summary.</div>
+  <div class="ms-auto d-flex gap-2">
+    <input class="form-control form-control-sm" style="max-width:220px" id="iiSearch" placeholder="filter image / OS">
+    <button class="btn btn-sm btn-outline-secondary" id="iiRefresh">Refresh</button>
+    <a class="btn btn-sm btn-primary" href="/trivy-scan">New Trivy Scan</a>
+  </div>
+</div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive">
+  <table class="table table-sm table-hover align-middle mb-0">
+    <thead><tr><th>Image</th><th>OS</th><th>Digest</th><th>Crit</th><th>High</th><th>Med</th><th>Low</th><th>Vulns</th><th>Fixable</th><th>Secrets</th><th>Misconfig</th><th>Pkgs</th><th>Scans</th><th>Last scan</th><th></th></tr></thead>
+    <tbody id="iiBody"><tr><td colspan="15" class="empty px-3">Loading…</td></tr></tbody>
+  </table>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/image-inventory.js') }}"></script>{% endblock %}

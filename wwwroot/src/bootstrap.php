@@ -17,6 +17,8 @@ const PAGES = [
     'commix'           => ['title' => 'Commix', 'group' => 'Open Source Tools', 'icon' => 'inject', 'template' => 'pages/commix.html.twig'],
     'container-overview' => ['title' => 'Overview', 'group' => 'Container Security', 'icon' => 'container', 'template' => 'pages/container-overview.html.twig'],
     'trivy-scan'       => ['title' => 'Trivy Scan', 'group' => 'Container Security', 'icon' => 'vuln', 'template' => 'pages/trivy.html.twig'],
+    'image-inventory'  => ['title' => 'Image Inventory', 'group' => 'Container Security', 'icon' => 'layers', 'template' => 'pages/image-inventory.html.twig'],
+    'image-vulns'      => ['title' => 'Image Vulnerabilities', 'group' => 'Container Security', 'icon' => 'bug', 'template' => 'pages/image-vulns.html.twig'],
     'scans'            => ['title' => 'Scans', 'group' => 'Tenable Web App Scanning', 'icon' => 'radar', 'template' => 'pages/scans.html.twig'],
     'logs'             => ['title' => 'Logs', 'group' => 'Tenable Web App Scanning', 'icon' => 'terminal', 'template' => 'pages/logs.html.twig'],
     'scan-results'     => ['title' => 'Scan Results', 'group' => 'Tenable Web App Scanning', 'icon' => 'list', 'template' => 'pages/results.html.twig'],

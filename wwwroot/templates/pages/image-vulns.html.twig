@@ -1,0 +1,22 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <div class="text-body-secondary small">Unique CVEs across all scanned images &mdash; click a CVE to see every affected image.</div>
+  <div class="ms-auto d-flex gap-2 flex-wrap">
+    <select class="form-select form-select-sm" style="max-width:150px" id="ivSev">
+      <option value="">All severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option><option>Unknown</option>
+    </select>
+    <div class="form-check form-switch mb-0 d-flex align-items-center"><input class="form-check-input me-1" type="checkbox" id="ivFixable"><label class="form-check-label small" for="ivFixable">Fixable only</label></div>
+    <input class="form-control form-control-sm" style="max-width:200px" id="ivSearch" placeholder="filter CVE / package">
+    <button class="btn btn-sm btn-outline-secondary" id="ivRefresh">Refresh</button>
+  </div>
+</div>
+<div class="row g-2 mb-3" id="ivCards"></div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive" style="max-height:72vh;overflow:auto">
+  <table class="table table-sm table-hover align-middle mb-0">
+    <thead class="position-sticky top-0"><tr><th style="width:30px"></th><th>Severity</th><th>CVE</th><th>CVSS</th><th>Images</th><th>Fixed in</th><th>Title</th></tr></thead>
+    <tbody id="ivBody"><tr><td colspan="7" class="empty px-3">Loading…</td></tr></tbody>
+  </table>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/image-vulns.js') }}"></script>{% endblock %}

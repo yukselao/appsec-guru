@@ -297,6 +297,64 @@ def summary(r):
     return out
 
 
+_SEV_RANK = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1, "Unknown": 0}
+
+
+def images():
+    """Image inventory: the latest scan per image reference, with its summary.
+    Every value is from stored scans - no Docker socket, no live enumeration."""
+    with session_scope() as s:
+        scans = list(s.execute(select(TrivyScan).order_by(desc(TrivyScan.id))).scalars())
+    latest, seen = {}, {}
+    for sc in scans:
+        latest.setdefault(sc.target, sc)
+        seen.setdefault(sc.target, []).append(sc)
+    out = []
+    for tgt, sc in latest.items():
+        meta = (sc.results or {}).get("metadata") or {}
+        stt = sc.stats or {}
+        same = seen[tgt]
+        out.append({"image": tgt, "digest": sc.digest or meta.get("digest"),
+                    "os": meta.get("os"), "os_family": meta.get("os_family"),
+                    "last_scan_id": sc.id, "last_scanned": sc.created_at.isoformat() if sc.created_at else None,
+                    "first_seen": (same[-1].created_at.isoformat() if same[-1].created_at else None),
+                    "scans": len(same), "status": sc.status,
+                    "vulnerabilities": stt.get("vulnerabilities", 0), "by_severity": stt.get("by_severity", {}),
+                    "fixable": stt.get("fixable", 0), "secrets": stt.get("secrets", 0),
+                    "misconfigurations": stt.get("misconfigurations", 0), "packages": stt.get("packages", 0)})
+    out.sort(key=lambda x: -x["vulnerabilities"])
+    return {"images": out}
+
+
+def vulnerabilities():
+    """Every unique CVE across the latest scan of each image, with the affected
+    images and packages (drill-down from a CVE to every affected image)."""
+    with session_scope() as s:
+        scans = list(s.execute(select(TrivyScan).where(TrivyScan.status == "completed")
+                               .order_by(desc(TrivyScan.id))).scalars())
+    latest = {}
+    for sc in scans:
+        latest.setdefault(sc.target, sc)
+    by_cve = {}
+    for tgt, sc in latest.items():
+        for v in (sc.results or {}).get("vulnerabilities", []):
+            c = by_cve.get(v["cve"])
+            if c is None:
+                c = by_cve[v["cve"]] = {"cve": v["cve"], "severity": v["severity"], "title": v.get("title") or "",
+                                        "url": v.get("url") or "", "cvss": v.get("cvss") or "",
+                                        "images": {}, "packages": set(), "fixed": ""}
+            c["images"][tgt] = sc.id
+            c["packages"].add("{} {}".format(v.get("pkg"), v.get("installed")))
+            if v.get("fixed") and not c["fixed"]:
+                c["fixed"] = v["fixed"]
+    cves = [{"cve": c["cve"], "severity": c["severity"], "title": c["title"], "url": c["url"], "cvss": c["cvss"],
+             "fixed": c["fixed"], "packages": sorted(c["packages"]),
+             "images": [{"image": k, "scan_id": vid} for k, vid in sorted(c["images"].items())],
+             "image_count": len(c["images"])} for c in by_cve.values()]
+    cves.sort(key=lambda x: (-_SEV_RANK.get(x["severity"], 0), -x["image_count"], x["cve"] or ""))
+    return {"cves": cves, "count": len(cves)}
+
+
 def overview():
     """DB-backed aggregate metrics for the Container Security overview. Every
     number comes from stored scans; nothing is hardcoded."""

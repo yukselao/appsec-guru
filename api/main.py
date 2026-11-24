@@ -1339,6 +1339,16 @@ def trivy_overview():
     return trivy.overview()
 
 
+@router.get("/trivy/images")
+def trivy_images():
+    return trivy.images()
+
+
+@router.get("/trivy/vulnerabilities")
+def trivy_vulnerabilities():
+    return trivy.vulnerabilities()
+
+
 @router.post("/trivy")
 def trivy_start(req: Request, params: dict = Body(...)):
     try:

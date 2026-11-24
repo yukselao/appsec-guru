@@ -27,6 +27,7 @@
   'inject': '<path d="M14 3l7 7-3 3-7-7zM11 6l-7 7v4h4l7-7M9 14l1 1"/>',
   'container': '<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/><path d="M12 11.5l3.5-2"/>',
   'vuln': '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M12 8v4M12 15h.01"/>',
+  'layers': '<path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/>',
 } -%}
 <svg class="ico {{ cls|default('') }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ paths[name]|default('')|raw }}</svg>
 {%- endmacro %}
