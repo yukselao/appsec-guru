@@ -7,6 +7,53 @@
   const live = WT.liveLog('katana', {modal: '#kaLogModal', view: '#kaLogView', state: '#kaLogState', scroll: '#kaLogScroll', title: '#kaLogTitle', lineClass: logClass});
   const url = WT.runUrl('katana', id => watch(id), () => stop());
 
+  // ---- scan profiles (preset field values)
+  const PROFILES = {
+    quick:    {depth: 2, c: 5,  p: 5, rl: 10, to: 10, retry: 1, ct: '5m',  js_crawl: true,  jsluice: false, headless: false, form_extraction: true, tech_detect: true, ignore_query_params: true},
+    standard: {depth: 3, c: 10, p: 5, rl: 20, to: 10, retry: 1, ct: '10m', js_crawl: true,  jsluice: false, headless: false, form_extraction: true, tech_detect: true, ignore_query_params: true},
+    browser:  {depth: 3, c: 10, p: 5, rl: 20, to: 15, retry: 1, ct: '10m', js_crawl: true,  jsluice: false, headless: true,  form_extraction: true, tech_detect: true, ignore_query_params: true}
+  };
+  function applyProfile(name) {
+    const pf = PROFILES[name]; if (!pf) return;
+    $('#kaDepth').val(pf.depth); $('#kaC').val(pf.c); $('#kaP').val(pf.p); $('#kaRl').val(pf.rl);
+    $('#kaTo').val(pf.to); $('#kaRetry').val(pf.retry); $('#kaCt').val(pf.ct);
+    $('.kaOpt').each(function () { this.checked = !!pf[$(this).data('flag')]; });
+    updateCli();
+  }
+
+  // ---- read the form into a request body
+  function readForm() {
+    const b = {target: $('#kaTarget').val().trim(), profile: $('input[name=kaProfile]:checked').val(),
+      depth: $('#kaDepth').val(), field_scope: $('#kaScope').val(), known_files: $('#kaKnown').val(),
+      concurrency: $('#kaC').val(), parallelism: $('#kaP').val(), rate_limit: $('#kaRl').val(),
+      timeout: $('#kaTo').val(), retry: $('#kaRetry').val(), crawl_duration: $('#kaCt').val().trim(),
+      include_regex: $('#kaCs').val().trim(), exclude_regex: $('#kaCos').val().trim(),
+      headers: $('#kaHeaders').val(), proxy: $('#kaProxy').val().trim()};
+    $('.kaOpt').each(function () { b[$(this).data('flag')] = this.checked; });
+    return b;
+  }
+  const q = v => /[\s'"$;&|<>()]/.test(v) ? "'" + String(v).replace(/'/g, "'\\''") + "'" : v;
+  function cliCmd(b) {
+    const a = ['katana', '-u', q(b.target || '<target>'), '-d', b.depth, '-fs', b.field_scope,
+      '-c', b.concurrency, '-p', b.parallelism, '-rl', b.rate_limit, '-timeout', b.timeout, '-retry', b.retry];
+    if (b.known_files) a.push('-kf', b.known_files);
+    if (b.crawl_duration) a.push('-ct', b.crawl_duration);
+    if (b.js_crawl) a.push('-jc');
+    if (b.jsluice) a.push('-jsl');
+    if (b.form_extraction) a.push('-fx');
+    if (b.tech_detect) a.push('-td');
+    if (b.ignore_query_params) a.push('-iqp');
+    if (b.headless) a.push('-hl', '-sc', '-nos');
+    if (b.include_regex) a.push('-cs', q(b.include_regex));
+    if (b.exclude_regex) a.push('-cos', q(b.exclude_regex));
+    (b.headers || '').split('\n').map(s => s.trim()).filter(Boolean).forEach(h => a.push('-H', q(h)));
+    if (b.proxy) a.push('-proxy', b.proxy);
+    a.push('-jsonl');
+    return a.join(' ');
+  }
+  function updateCli() { $('#kaCli').text(cliCmd(readForm())); }
+
+  // ---- results
   function render(r) {
     S.target = r.target || '';
     $('#kaState').html(WT.statusBadge(r.status) + (r.active ? ' <span class="spinner-border spinner-border-sm text-primary"></span>' : ''));
@@ -20,8 +67,8 @@
       (st.hosts != null ? `<div><span class="badge text-bg-secondary">${st.hosts}</span> hosts</div>` : '') +
       `<div class="small text-body-secondary">${WT.esc(r.target)}</div>` +
       (r.error ? `<div class="w-100"><div class="alert alert-danger py-1 mb-0 small">${WT.esc(r.error)}</div></div>` : ''));
-    const q = ($('#kaSearch').val() || '').toLowerCase();
-    const rows = res.filter(u => !q || (u.url || '').toLowerCase().includes(q));
+    const query = ($('#kaSearch').val() || '').toLowerCase();
+    const rows = res.filter(u => !query || (u.url || '').toLowerCase().includes(query));
     $('#kaResults').html(rows.length ? rows.map(u => `<tr>
       <td><span class="badge text-bg-light border">${WT.esc(u.method)}</span></td>
       <td class="mono small"><a href="${WT.esc(u.url)}" target="_blank" rel="noopener">${WT.esc(u.url)}</a></td>
@@ -59,10 +106,13 @@
     });
   }
 
+  // ---- events
+  $(document).on('change', 'input[name=kaProfile]', function () { applyProfile(this.value); });
+  $('#kaForm').on('input change', ':input', updateCli);
+  $('#kaCopy').on('click', () => { navigator.clipboard.writeText($('#kaCli').text()).then(() => WT.ok('Command copied')); });
   $('#kaForm').on('submit', function (e) {
     e.preventDefault();
-    const body = {target: $('#kaTarget').val().trim(), depth: $('#kaDepth').val().trim(),
-      scope: $('#kaScope').val(), known_files: $('#kaKnown').prop('checked'), js_crawl: $('#kaJs').prop('checked')};
+    const body = readForm();
     if (!body.target) { WT.warn('Enter a target URL'); return; }
     $('#kaGo').prop('disabled', true);
     WT.post('/katana', body).then(r => { WT.ok('Crawl #' + r.run_id + ' started'); url.push(r.run_id); watch(r.run_id); })
@@ -79,6 +129,7 @@
   $(document).on('click', '[data-del]', function () { const id = $(this).data('del'); if (!confirm('Delete run #' + id + '?')) return; WT.api('DELETE', '/katana/' + id).then(() => { WT.ok('Deleted'); if (watchId === id) { url.clear(); stop(); } else runs(); }).catch(e => WT.fail(e)); });
 
   const t = new URLSearchParams(location.search).get('target'); if (t) $('#kaTarget').val(t);
+  applyProfile('standard'); updateCli();
   if (url.current()) watch(url.current());
   else runs().then(list => { const on = list.find(x => x.active); if (on && !watchId) watch(on.id); });
 })(jQuery, window.WT);

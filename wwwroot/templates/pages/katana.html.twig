@@ -1,32 +1,89 @@
 {% extends 'base.html.twig' %}
 {% block content %}
 <div class="row g-3">
-  <div class="col-xl-4">
+  <div class="col-xl-5">
     <div class="card mb-3">
-      <div class="card-header">New Katana crawl</div>
+      <div class="card-header d-flex align-items-center">Advanced Web Crawler
+        <span class="small text-body-secondary ms-auto">ProjectDiscovery Katana</span></div>
       <div class="card-body">
-        <p class="small text-body-secondary">Web crawling &amp; endpoint discovery with <b>Katana</b>, in its own container. Lab use only &mdash; crawl hosts you are authorised to test.</p>
+        <p class="small text-body-secondary">Lab use only &mdash; crawl hosts you are authorised to test.</p>
         <form id="kaForm">
           <label class="form-label" for="kaTarget">Target URL</label>
-          <input class="form-control mb-2" id="kaTarget" placeholder="http://192.168.1.140:3000">
-          <div class="row g-2">
-            <div class="col-6"><label class="form-label" for="kaDepth">Depth</label><input class="form-control" id="kaDepth" type="number" min="1" max="10" placeholder="default"></div>
-            <div class="col-6"><label class="form-label" for="kaScope">Scope</label>
-              <select class="form-select" id="kaScope"><option value="strict">This host only</option><option value="any">Any in-scope host</option></select></div>
+          <input class="form-control mb-3" id="kaTarget" placeholder="https://www.example.com">
+
+          <label class="form-label mb-1">Scan Profile</label>
+          <div class="btn-group w-100 mb-3" role="group" id="kaProfile">
+            <input type="radio" class="btn-check" name="kaProfile" id="kp-quick" value="quick" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="kp-quick">Quick</label>
+            <input type="radio" class="btn-check" name="kaProfile" id="kp-standard" value="standard" autocomplete="off" checked>
+            <label class="btn btn-outline-secondary" for="kp-standard">Standard</label>
+            <input type="radio" class="btn-check" name="kaProfile" id="kp-browser" value="browser" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="kp-browser">Browser</label>
           </div>
-          <div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" id="kaKnown" checked><label class="form-check-label" for="kaKnown">Known files (robots.txt, sitemap.xml)</label></div>
-          <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="kaJs"><label class="form-check-label" for="kaJs">Parse endpoints from JavaScript</label></div>
-          <div class="form-text mb-3">Concurrency &amp; rate defaults: <a href="/settings">Settings</a> &rarr; Katana.</div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label" for="kaDepth">Crawl Depth</label>
+              <select class="form-select" id="kaDepth">{% for n in 1..10 %}<option{{ n == 3 ? ' selected' : '' }}>{{ n }}</option>{% endfor %}</select></div>
+            <div class="col-6"><label class="form-label" for="kaScope">Crawl Scope</label>
+              <select class="form-select" id="kaScope">
+                <option value="fqdn" selected>Exact hostname</option>
+                <option value="rdn">Root domain + subdomains</option>
+                <option value="dn">Domain keyword</option>
+              </select></div>
+          </div>
+          <label class="form-label" for="kaKnown">Known Files</label>
+          <select class="form-select mb-3" id="kaKnown">
+            <option value="all" selected>All known files</option>
+            <option value="robotstxt">robots.txt only</option>
+            <option value="sitemapxml">sitemap.xml only</option>
+            <option value="">None</option>
+          </select>
+
+          <div class="fw-semibold mb-2">Discovery Options</div>
+          <div class="row row-cols-1 g-1 mb-2" id="kaDiscovery">
+            <div class="col"><div class="form-check form-switch"><input class="form-check-input kaOpt" type="checkbox" id="kaJc" data-flag="js_crawl" checked><label class="form-check-label" for="kaJc">JavaScript Crawling <span class="mono small text-body-secondary">-jc</span></label></div></div>
+            <div class="col"><div class="form-check form-switch"><input class="form-check-input kaOpt" type="checkbox" id="kaJsl" data-flag="jsluice"><label class="form-check-label" for="kaJsl">Advanced JavaScript Analysis <span class="mono small text-body-secondary">-jsl</span> <span class="badge text-bg-light border">memory intensive</span></label></div></div>
+            <div class="col"><div class="form-check form-switch"><input class="form-check-input kaOpt" type="checkbox" id="kaHl" data-flag="headless"><label class="form-check-label" for="kaHl">Headless Browser <span class="mono small text-body-secondary">-hl</span> <span class="badge text-bg-light border">experimental</span></label></div></div>
+            <div class="col"><div class="form-check form-switch"><input class="form-check-input kaOpt" type="checkbox" id="kaFx" data-flag="form_extraction" checked><label class="form-check-label" for="kaFx">HTML Form Extraction <span class="mono small text-body-secondary">-fx</span></label></div></div>
+            <div class="col"><div class="form-check form-switch"><input class="form-check-input kaOpt" type="checkbox" id="kaTd" data-flag="tech_detect" checked><label class="form-check-label" for="kaTd">Technology Detection <span class="mono small text-body-secondary">-td</span></label></div></div>
+            <div class="col"><div class="form-check form-switch"><input class="form-check-input kaOpt" type="checkbox" id="kaIqp" data-flag="ignore_query_params" checked><label class="form-check-label" for="kaIqp">Ignore Duplicate Query Variations <span class="mono small text-body-secondary">-iqp</span></label></div></div>
+          </div>
+
+          <div class="accordion accordion-flush mb-3" id="kaAdvAcc">
+            <div class="accordion-item">
+              <h3 class="accordion-header"><button class="accordion-button collapsed px-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#kaAdv">Advanced Performance Settings</button></h3>
+              <div id="kaAdv" class="accordion-collapse collapse" data-bs-parent="#kaAdvAcc"><div class="accordion-body px-0">
+                <div class="row g-2">
+                  <div class="col-6 col-md-4"><label class="form-label small" for="kaC">Concurrency <span class="mono text-body-secondary">-c</span></label><input class="form-control form-control-sm" id="kaC" type="number" min="1" max="50" value="10"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="kaP">Parallelism <span class="mono text-body-secondary">-p</span></label><input class="form-control form-control-sm" id="kaP" type="number" min="1" max="50" value="5"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="kaRl">Rate Limit <span class="mono text-body-secondary">-rl</span></label><input class="form-control form-control-sm" id="kaRl" type="number" min="1" max="1000" value="20"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="kaTo">Timeout (s) <span class="mono text-body-secondary">-timeout</span></label><input class="form-control form-control-sm" id="kaTo" type="number" min="1" max="60" value="10"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="kaRetry">Retry <span class="mono text-body-secondary">-retry</span></label><input class="form-control form-control-sm" id="kaRetry" type="number" min="0" max="5" value="1"></div>
+                  <div class="col-6 col-md-4"><label class="form-label small" for="kaCt">Duration <span class="mono text-body-secondary">-ct</span></label><input class="form-control form-control-sm" id="kaCt" placeholder="10m" value="10m"></div>
+                  <div class="col-12"><label class="form-label small" for="kaCs">Include Regex <span class="mono text-body-secondary">-cs</span></label><input class="form-control form-control-sm mono" id="kaCs" placeholder="/admin|/api"></div>
+                  <div class="col-12"><label class="form-label small" for="kaCos">Exclude Regex <span class="mono text-body-secondary">-cos</span></label><input class="form-control form-control-sm mono" id="kaCos" placeholder="logout|signout"></div>
+                  <div class="col-12"><label class="form-label small" for="kaHeaders">Custom Headers <span class="mono text-body-secondary">-H</span> <span class="text-body-secondary">(one per line)</span></label><textarea class="form-control form-control-sm mono" id="kaHeaders" rows="2" placeholder="Authorization: Bearer ...
+Cookie: session=..."></textarea></div>
+                  <div class="col-12"><label class="form-label small" for="kaProxy">Proxy <span class="mono text-body-secondary">-proxy</span></label><input class="form-control form-control-sm mono" id="kaProxy" placeholder="http://127.0.0.1:8080"></div>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">Generated CLI Command</span>
+            <button type="button" class="btn btn-sm btn-link ms-auto py-0" id="kaCopy">Copy</button></div>
+          <pre class="code small p-2 mb-3" id="kaCli" style="white-space:pre-wrap;word-break:break-all"></pre>
+
           <button class="btn btn-primary w-100" type="submit" id="kaGo">Start crawl</button>
         </form>
       </div>
     </div>
     <div class="card">
       <div class="card-header d-flex align-items-center">History <span class="badge text-bg-light border ms-2" id="kaRunsCount"></span></div>
-      <div class="card-body p-0" style="max-height:60vh;overflow:auto"><ul class="list-group list-group-flush small" id="kaRuns"></ul></div>
+      <div class="card-body p-0" style="max-height:50vh;overflow:auto"><ul class="list-group list-group-flush small" id="kaRuns"></ul></div>
     </div>
   </div>
-  <div class="col-xl-8">
+  <div class="col-xl-7">
     <div class="card">
       <div class="card-header d-flex align-items-center">Endpoints <span id="kaState" class="ms-2"></span>
         <a href="#" class="small ms-2 d-none" id="kaLogOpen">Log &#8599;</a>
@@ -36,7 +93,7 @@
       </div>
       <div class="card-body">
         <div class="d-flex flex-wrap gap-3 mb-2" id="kaStats"></div>
-        <div class="table-responsive" style="max-height:60vh;overflow:auto"><table class="table table-sm table-hover align-middle mb-0">
+        <div class="table-responsive" style="max-height:65vh;overflow:auto"><table class="table table-sm table-hover align-middle mb-0">
           <thead class="position-sticky top-0"><tr><th>Method</th><th>URL</th><th>Status</th></tr></thead>
           <tbody id="kaResults"><tr><td colspan="3" class="empty px-3">Start a crawl to list endpoints.</td></tr></tbody>
         </table></div>

@@ -108,6 +108,9 @@ services:
       RECON_KATANA_DEPTH: ${recon_katana_depth:-}
       RECON_KATANA_CONCURRENCY: ${recon_katana_concurrency:-}
       RECON_KATANA_RATE_LIMIT: ${recon_katana_rate_limit:-}
+      RECON_KATANA_PARALLELISM: ${recon_katana_parallelism:-}
+      RECON_KATANA_TIMEOUT: ${recon_katana_timeout:-}
+      RECON_KATANA_RETRY: ${recon_katana_retry:-}
       RECON_KATANA_STAGE_TIMEOUT: ${recon_katana_stage_timeout:-}
       RECON_SQLMAP_LEVEL: ${recon_sqlmap_level:-}
       RECON_SQLMAP_RISK: ${recon_sqlmap_risk:-}
@@ -202,6 +205,7 @@ services:
     build: {context: ./docker/recon, dockerfile: Dockerfile.katana}
     image: was-troubleshooter-katana
     networks: [wastroubleshooter]
+    shm_size: "1gb"
     restart: unless-stopped
 
   recon-sqlmap:

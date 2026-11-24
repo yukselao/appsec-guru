@@ -105,11 +105,15 @@
 
   <div class="tab-pane fade" id="tKatana" data-section="katana">
     <div class="card mb-3"><div class="card-header">Katana defaults &amp; limits</div><div class="card-body"><div class="row g-3">
-      {{ f.field('recon.katana_depth', 'Crawl depth', 'number', 'Default 3, 1 to 10. A run can override this in the modal.', 'col-md-3', 1, 10) }}
-      {{ f.field('recon.katana_concurrency', 'Concurrency', 'number', 'Default 10, 1 to 50.', 'col-md-3', 1, 50) }}
-      {{ f.field('recon.katana_rate_limit', 'Requests per second (max)', 'number', 'Default 150, 1 to 1000.', 'col-md-3', 1, 1000) }}
-      {{ f.field('recon.katana_stage_timeout', 'Crawl time limit (s)', 'number', 'Default 900, 60 to 3600.', 'col-md-3', 60, 3600) }}
+      {{ f.field('recon.katana_depth', 'Crawl depth', 'number', 'Default 3, 1 to 10.', 'col-md-3', 1, 10) }}
+      {{ f.field('recon.katana_concurrency', 'Concurrency', 'number', 'Concurrent fetchers. Default 10, 1 to 50.', 'col-md-3', 1, 50) }}
+      {{ f.field('recon.katana_parallelism', 'Parallelism', 'number', 'Concurrent inputs. Default 5, 1 to 50.', 'col-md-3', 1, 50) }}
+      {{ f.field('recon.katana_rate_limit', 'Requests per second (max)', 'number', 'Default 20, 1 to 1000.', 'col-md-3', 1, 1000) }}
+      {{ f.field('recon.katana_timeout', 'Request timeout (s)', 'number', 'Default 10, 1 to 60.', 'col-md-3', 1, 60) }}
+      {{ f.field('recon.katana_retry', 'Retry count', 'number', 'Default 1, 0 to 5.', 'col-md-3', 0, 5) }}
+      {{ f.field('recon.katana_stage_timeout', 'Crawl time limit (s)', 'number', 'Hard cap, overrides a longer -ct. Default 900, 60 to 3600.', 'col-md-3', 60, 3600) }}
     </div></div></div>
+    <div class="alert alert-light border small">These are the per-run defaults and hard limits. Depth, scope, discovery options, headers and proxy are chosen per run in the Katana modal.</div>
     <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="katana">Save</button>
       <button class="btn btn-outline-warning ms-auto" data-reset="katana">Revert to .env</button></div>
   </div>

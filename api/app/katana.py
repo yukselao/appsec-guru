@@ -20,6 +20,20 @@ log = logging.getLogger("katana")
 KATANA = os.environ.get("RECON_KATANA", "recon-katana:7006")
 URL_RX = re.compile(r"^https?://[\w.\-]+(:\d+)?(/[^\s]*)?$", re.I)
 ANSI_RX = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+FIELD_SCOPE = ("dn", "rdn", "fqdn")
+KNOWN_FILES = ("", "all", "robotstxt", "sitemapxml")
+DURATION_RX = re.compile(r"^\d{1,4}(s|m|h)?$")
+HEADER_RX = re.compile(r"^[A-Za-z0-9\-]+:\s?.+$")
+PROXY_RX = re.compile(r"^(https?|socks5)://[\w.\-]+:\d{1,5}$", re.I)
+REGEX_MAX = 300
+
+
+def _ct_seconds(d):
+    if not d:
+        return 0
+    n = int(re.match(r"\d+", d).group())
+    unit = d[-1] if d[-1].isalpha() else "s"
+    return n * {"s": 1, "m": 60, "h": 3600}.get(unit, 1)
 LOG_MAX = 4000
 LOG_RUNS = 25
 _active = {}
@@ -101,31 +115,81 @@ def _clean_url(raw):
     return u
 
 
-def _argv(url, opts):
-    """Whole katana argv. -jsonl/-silent/-no-color are forced by the container."""
-    argv = ["-u", url,
-            "-d", str(opts["depth"]),
-            "-c", str(opts["concurrency"]),
-            "-rate-limit", str(opts["rate_limit"]),
-            "-timeout", "10"]
-    if opts.get("known_files"):
-        argv += ["-kf", "all"]        # robots.txt + sitemap.xml
-    if opts.get("js_crawl"):
-        argv += ["-jc"]               # parse endpoints from JS (no headless)
-    if opts.get("scope") == "strict":
-        argv += ["-fs", "fqdn"]       # stay on the same host
+def _argv(url, o):
+    """Whole katana argv. Only whitelisted flags; user strings are only ever flag
+    VALUES. -jsonl/-silent/-no-color are forced by the container."""
+    argv = ["-u", url, "-d", str(o["depth"]), "-fs", o["field_scope"],
+            "-c", str(o["concurrency"]), "-p", str(o["parallelism"]),
+            "-rl", str(o["rate_limit"]), "-timeout", str(o["timeout"]), "-retry", str(o["retry"])]
+    if o.get("known_files"):
+        argv += ["-kf", o["known_files"]]
+    if o.get("crawl_duration"):
+        argv += ["-ct", o["crawl_duration"]]
+    if o.get("js_crawl"):
+        argv += ["-jc"]
+    if o.get("jsluice"):
+        argv += ["-jsl"]
+    if o.get("form_extraction"):
+        argv += ["-fx"]
+    if o.get("tech_detect"):
+        argv += ["-td"]
+    if o.get("ignore_query_params"):
+        argv += ["-iqp"]
+    if o.get("headless"):
+        argv += ["-hl", "-sc", "-nos", "-ho", "--disable-dev-shm-usage", "-ho", "--disable-gpu"]
+    if o.get("include_regex"):
+        argv += ["-cs", o["include_regex"]]
+    if o.get("exclude_regex"):
+        argv += ["-cos", o["exclude_regex"]]
+    for h in o.get("headers") or []:
+        argv += ["-H", h]
+    if o.get("proxy"):
+        argv += ["-proxy", o["proxy"]]
     return argv
 
 
 def start(params, client_ip=None):
     url = _clean_url(params.get("target"))
-    opts = {"depth": st.get_int("recon.katana_depth", _ov(params, "depth", "recon.katana_depth")),
+    field_scope = (params.get("field_scope") or "fqdn").lower()
+    if field_scope not in FIELD_SCOPE:
+        raise ValueError("crawl scope must be dn, rdn or fqdn")
+    known = (params.get("known_files") or "").lower()
+    if known not in KNOWN_FILES:
+        raise ValueError("known files must be all, robotstxt, sitemapxml or empty")
+    duration = (params.get("crawl_duration") or "").strip().lower().replace(" ", "")
+    if duration and not DURATION_RX.match(duration):
+        raise ValueError("crawl duration must look like 10m, 600s or 1h")
+    include_rx = (params.get("include_regex") or "").strip()
+    exclude_rx = (params.get("exclude_regex") or "").strip()
+    for name, rx in (("include", include_rx), ("exclude", exclude_rx)):
+        if len(rx) > REGEX_MAX or "\n" in rx:
+            raise ValueError("{} regex is too long".format(name))
+    headers = []
+    for line in (params.get("headers") or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if not HEADER_RX.match(line):
+            raise ValueError("headers must be 'Name: value', one per line")
+        headers.append(line)
+    proxy = (params.get("proxy") or "").strip()
+    if proxy and not PROXY_RX.match(proxy):
+        raise ValueError("proxy must look like http://host:8080 or socks5://host:1080")
+    depth = st.get_int("recon.katana_depth", _ov(params, "depth", "recon.katana_depth"))
+    if known == "all" and depth < 3:
+        depth = 3   # known-files 'all' needs a minimum depth of 3
+    opts = {"depth": depth, "field_scope": field_scope, "known_files": known, "crawl_duration": duration,
             "concurrency": st.get_int("recon.katana_concurrency", _ov(params, "concurrency", "recon.katana_concurrency")),
+            "parallelism": st.get_int("recon.katana_parallelism", _ov(params, "parallelism", "recon.katana_parallelism")),
             "rate_limit": st.get_int("recon.katana_rate_limit", _ov(params, "rate_limit", "recon.katana_rate_limit")),
+            "timeout": st.get_int("recon.katana_timeout", _ov(params, "timeout", "recon.katana_timeout")),
+            "retry": st.get_int("recon.katana_retry", _ov(params, "retry", "recon.katana_retry")),
             "stage_timeout": st.get_int("recon.katana_stage_timeout"),
-            "known_files": bool(params.get("known_files")),
-            "js_crawl": bool(params.get("js_crawl")),
-            "scope": "strict" if params.get("scope") != "any" else "any"}
+            "js_crawl": bool(params.get("js_crawl")), "jsluice": bool(params.get("jsluice")),
+            "headless": bool(params.get("headless")), "form_extraction": bool(params.get("form_extraction")),
+            "tech_detect": bool(params.get("tech_detect")), "ignore_query_params": bool(params.get("ignore_query_params")),
+            "include_regex": include_rx, "exclude_regex": exclude_rx, "headers": headers, "proxy": proxy,
+            "profile": (params.get("profile") or "")[:20]}
     with session_scope() as s:
         r = KatanaRun(target=url, status="pending", options=opts)
         s.add(r)
@@ -175,7 +239,8 @@ def _run(run_id, url, opts, cancel_ev):
         host, port = _hostport(KATANA)
         s = socket.create_connection((host, port), timeout=15)
         s.sendall(("\n".join(argv) + "\n__END__\n").encode("utf-8"))
-        deadline = time.time() + opts["stage_timeout"]
+        total = min(7200, max(opts["stage_timeout"], _ct_seconds(opts.get("crawl_duration")) + 120))
+        deadline = time.time() + total
         rbuf, last_push = b"", 0.0
 
         def handle(line):
