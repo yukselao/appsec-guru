@@ -125,6 +125,51 @@ def derive_policy(sc, src_ref, name, families_spec, fast, sets, audit):
     return new_id
 
 
+def create_policy_from_template(sc, template_id, name, families_spec, sets, audit):
+    """Create a fresh policy from a WAS policy template (what SC's "Add Policy"
+    does): every template option at its default, then the caller's overrides."""
+    tpl = next((t for t in sc.was_templates() if t["id"] == str(template_id)), None)
+    if not tpl:
+        die("policy template {} is not a Web App Scanning template".format(template_id))
+    prefs = {}
+    for sec in tpl["sections"]:
+        for inp in sec["inputs"]:
+            prefs[inp["id"]] = inp["default"]
+    known = set(prefs)
+    for k, v in (sets or {}).items():
+        if k in known or k in ("was_debug_mode", "was[debug_config]"):
+            prefs[k] = v
+        else:
+            warn("option {} is not part of template '{}', skipped".format(k, tpl["name"]))
+    info("creating policy '{}' from template {} '{}'".format(name, tpl["id"], tpl["name"]))
+    try:
+        new = sc.post("policy", {"name": name, "description": "AppSec Guru custom scan", "context": "",
+                                 "policyTemplate": {"id": tpl["id"]}, "preferences": {}})
+    except SCError as exc:
+        die("policy could not be created from the template: {}".format(exc))
+    new_id = str(new.get("id"))
+    audit.write("policy_create_from_template", template_id=tpl["id"], policy_id=new_id, name=name)
+    ok("new policy id {}".format(new_id))
+    if tpl["plugins"]:
+        fams = resolve_families(sc, families_spec) if families_spec else [(i, n) for i, n, _ in sc.was_families()]
+        info("plugin families: {}".format(", ".join(n for _, n in fams)))
+        set_policy_families(sc, new_id, [i for i, _ in fams], audit)
+    set_policy_prefs(sc, new_id, prefs, audit)
+    return new_id
+
+
+def pick_zone(sc, zone):
+    """SC rejects a WAS scan without a scan zone; fall back to the only/first one."""
+    if zone:
+        return int(zone)
+    zones = sc.zones()
+    if not zones:
+        die("no scan zone is defined on Security Center")
+    if len(zones) > 1:
+        warn("no scan zone chosen, using '{}'".format(zones[0].get("name")))
+    return int(zones[0]["id"])
+
+
 def pick_repo(sc, repo):
     if repo:
         return int(repo)

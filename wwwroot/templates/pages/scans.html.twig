@@ -41,21 +41,17 @@
   <div class="modal-header"><h5 class="modal-title" id="pmTitle">Create Tenable WAS Scan</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
   <div class="modal-body">
     <ol class="wizard-steps" id="pmSteps">
-      <li class="active" data-step="1">General</li><li data-step="2">Settings</li>
-      <li data-step="3">Targets</li><li data-step="4">Credentials</li><li data-step="5">Post Scan</li>
+      <li class="active" data-step="1">General</li><li data-step="2">Scan type</li><li data-step="3">Settings</li>
+      <li data-step="4">Targets</li><li data-step="5">Credentials</li><li data-step="6">Post Scan</li>
     </ol>
 
     {# ---- 1 · General ---- #}
     <section class="wizard-pane active" data-pane="1">
       <div class="row g-3">
-        <div class="col-md-6"><label class="form-label" for="pmName">Name</label><input class="form-control" id="pmName" placeholder="Juice Shop nightly"></div>
+        <div class="col-md-6"><label class="form-label" for="pmName">Name <span class="text-danger">*</span></label><input class="form-control" id="pmName" placeholder="Juice Shop nightly"></div>
         <div class="col-md-6"><label class="form-label" for="pmFolder">Folder</label><select class="form-select" id="pmFolder"></select></div>
         <div class="col-12"><label class="form-label" for="pmDesc">Description</label><input class="form-control" id="pmDesc"></div>
-        <div class="col-12"><label class="form-label" for="pmPolicy">Policy <span class="text-danger">*</span></label><select class="form-select" id="pmPolicy"></select></div>
       </div>
-      <div class="d-flex align-items-center mt-3 mb-2"><span class="form-label mb-0">Plugin families <span class="small text-body-secondary">(optional override)</span></span>
-        <span class="small text-body-secondary ms-2">none = the policy's own families</span><button type="button" class="btn btn-link btn-sm ms-auto" id="pmFamNone">Clear</button></div>
-      <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-1" id="pmFamilies"></div>
       <hr class="my-3">
       <div class="row g-3">
         <div class="col-md-5"><label class="form-label" for="pmSchedType">Schedule</label><select class="form-select" id="pmSchedType">
@@ -67,8 +63,54 @@
       </div>
     </section>
 
-    {# ---- 2 · Settings ---- #}
+    {# ---- 2 · Scan type ---- #}
     <section class="wizard-pane" data-pane="2">
+      <div class="row row-cols-1 row-cols-md-2 g-2 mb-3" id="pmMode">
+        <div class="col"><label class="card h-100 opt-card"><div class="card-body d-flex gap-2">
+          <input class="form-check-input mt-1" type="radio" name="pmMode" value="policy" checked>
+          <div><div class="fw-semibold">Saved policy</div><div class="small text-body-secondary">Use a policy that already exists on Security Center.</div></div></div></label></div>
+        <div class="col"><label class="card h-100 opt-card"><div class="card-body d-flex gap-2">
+          <input class="form-check-input mt-1" type="radio" name="pmMode" value="custom">
+          <div><div class="fw-semibold">Custom</div><div class="small text-body-secondary">Build the scan here from a Tenable template: pick the speed, the checks and the options.</div></div></div></label></div>
+      </div>
+
+      {# -- saved policy -- #}
+      <div id="pmModePolicy">
+        <label class="form-label" for="pmPolicy">Policy <span class="text-danger">*</span></label><select class="form-select" id="pmPolicy"></select>
+        <div class="d-flex align-items-center mt-3 mb-1"><span class="form-label mb-0">Plugin families <span class="small text-body-secondary">(optional)</span></span>
+          <button type="button" class="btn btn-link btn-sm ms-auto" id="pmFamNone">Clear</button></div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-1" id="pmFamilies"></div>
+        <div class="alert alert-light border small mt-3 mb-0" id="pmPolicyNote"></div>
+      </div>
+
+      {# -- custom: template + options -- #}
+      <div id="pmModeCustom" class="d-none">
+        <div class="form-label">Template</div>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2" id="pmTemplates"><div class="empty">Loading templates…</div></div>
+
+        <div id="pmSpeedWrap" class="mt-3 d-none">
+          <div class="form-label">Speed</div>
+          <div class="row row-cols-1 row-cols-md-4 g-2" id="pmSpeed"></div>
+        </div>
+
+        <div id="pmCFamWrap" class="mt-3 d-none">
+          <div class="d-flex flex-wrap align-items-center gap-1 mb-1"><span class="form-label mb-0 me-2">Checks to run <span class="small text-body-secondary">(plugin families)</span></span>
+            <span class="ms-auto d-flex flex-wrap gap-1" id="pmCFamPresets"></span></div>
+          <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-1" id="pmCFamilies"></div>
+        </div>
+
+        <div id="pmOptsWrap" class="mt-3 d-none">
+          <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">All template options</span>
+            <span class="badge text-bg-light border ms-2" id="pmOptsChanged">0 changed</span>
+            <button type="button" class="btn btn-link btn-sm ms-auto" id="pmOptsReset">Reset to template defaults</button></div>
+          <div class="accordion" id="pmOpts"></div>
+        </div>
+        <div class="alert alert-light border small mt-3 mb-0" id="pmCustomNote"></div>
+      </div>
+    </section>
+
+    {# ---- 3 · Settings ---- #}
+    <section class="wizard-pane" data-pane="3">
       <h6 class="text-body-secondary text-uppercase small fw-semibold mb-2">Basic</h6>
       <div class="row g-3">
         <div class="col-md-4"><label class="form-label" for="pmZone">Scan zone <span class="text-danger">*</span></label><select class="form-select" id="pmZone"></select></div>
@@ -78,7 +120,7 @@
       </div>
       <h6 class="text-body-secondary text-uppercase small fw-semibold mt-4 mb-2">Advanced</h6>
       <div class="row g-3">
-        <div class="col-md-4">
+        <div class="col-md-4" id="pmScopeCol">
           <div class="d-flex align-items-center mb-1"><label class="form-label mb-0" for="pmScope">Scope</label>
             <a href="#" class="info-dot ms-auto" tabindex="0" role="button" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-html="true"
                data-bs-title="Scope = the crawl limits AppSec Guru writes into a <i>copy</i> of your policy right before launching. Your source policy is never changed; the limits do not come from the policy, the tool sets them.<br><br><b>Fast (150 pages, 45 min)</b> writes: <code>was[scope]page_limit=150</code>, <code>directory_depth_limit=4</code>, <code>dom_depth_limit=3</code>, <code>was_timeout=00:45:00</code>, <code>was[http]request_concurrency=10</code>. A quick pass, good for a first look or reading the debug log.<br><br><b>As in the policy</b> writes nothing &mdash; the source policy's own limits apply (a full scan).<br><br><b>Custom</b> &mdash; set your own page limit (e.g. 10 for a quick test), time limit and requests/second."
@@ -102,22 +144,23 @@
       </div>
     </section>
 
-    {# ---- 3 · Targets ---- #}
-    <section class="wizard-pane" data-pane="3">
+    {# ---- 4 · Targets ---- #}
+    <section class="wizard-pane" data-pane="4">
       <label class="form-label" for="pmUrl">URLs <span class="text-danger">*</span> <span class="small text-body-secondary">(one per line)</span></label>
       <textarea class="form-control mono" id="pmUrl" rows="6" placeholder="http://192.168.1.82:3000"></textarea>
     </section>
 
-    {# ---- 4 · Credentials ---- #}
-    <section class="wizard-pane" data-pane="4">
+    {# ---- 5 · Credentials ---- #}
+    <section class="wizard-pane" data-pane="5">
+      <div class="alert alert-warning small d-none" id="pmCredNote">This template does not use credentials; any added here are ignored.</div>
       <div class="d-flex align-items-center mb-2"><span class="form-label mb-0">Scan credentials</span>
         <span class="small text-body-secondary ms-2">optional &mdash; for authenticated scans</span></div>
       <div id="pmCreds"></div>
       <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="pmAddCred">+ Add credential</button>
     </section>
 
-    {# ---- 5 · Post Scan ---- #}
-    <section class="wizard-pane" data-pane="5">
+    {# ---- 6 · Post Scan ---- #}
+    <section class="wizard-pane" data-pane="6">
       <div class="d-flex align-items-center mb-2"><span class="form-label mb-0">Reports to run on scan completion</span>
         <span class="small text-body-secondary ms-2">optional</span></div>
       <div id="pmReports"></div>

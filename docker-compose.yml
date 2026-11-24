@@ -89,6 +89,12 @@ services:
       WAS_LOG_PATH: ${was_log_path:-/var/log/nessus-was/scanner.log}
       OLLAMA_URL: ${ollama_url:-http://192.168.1.140:11434}
       OLLAMA_MODEL: ${ollama_model:-}
+      RECON_HTTPX_TIMEOUT: ${recon_httpx_timeout:-}
+      RECON_HTTPX_THREADS: ${recon_httpx_threads:-}
+      RECON_HTTPX_RATE_LIMIT: ${recon_httpx_rate_limit:-}
+      RECON_HTTPX_RETRIES: ${recon_httpx_retries:-}
+      RECON_IDLE_TIMEOUT: ${recon_idle_timeout:-}
+      RECON_STAGE_TIMEOUT: ${recon_stage_timeout:-}
     volumes:
       - ./api:/app:ro
       - ./db:/db:ro

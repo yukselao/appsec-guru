@@ -21,8 +21,14 @@ forward to an `EXEC` child). Output is one record per line — plain text
 | --- | --- | --- | --- |
 | subfinder | 7001 | one domain | subdomains, one per line |
 | dnsx | 7002 | host list | JSON per host (A/AAAA/CNAME/MX/NS/TXT) |
-| httpx | 7003 | host list | JSON per host (status, title, tech) |
+| httpx | 7003 | optional `__OPTS__` line, host list | JSON per host (status, title, tech) |
 | RustScan | 7004 | `<target> [ports]` | `host -> [open ports]` |
+
+httpx also accepts one optional first line with numeric options:
+`__OPTS__ timeout=10 threads=50 rate_limit=150 retries=0 max=905`. Unknown keys
+and non-numeric values are ignored. The values, the idle limit and the stage
+limit come from Settings > Subdomain Discovery. When a limit stops a stage early,
+the run is stored with an "incomplete" message.
 
 Adding a tool: drop `Dockerfile.<tool>`, `run-<tool>.sh` (reads the request,
 runs the tool, writes stdout) and `serve-<tool>.sh` (the socat listener), add a

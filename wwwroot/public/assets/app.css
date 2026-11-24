@@ -239,3 +239,9 @@ body.modal-open .wt-ai-fab { display: none; }
 @media (prefers-reduced-motion: reduce) { .wt-ai-fab, .wt-ai-fab::after, .wt-ai-fab .wt-ai-eyes, .wt-ai-fab .wt-ai-antenna { animation: none; } }
 
 .wt-content { padding-bottom: 6.5rem; }
+
+/* Port Scan live log modal */
+#psLogView { font-size: .82rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+#psLogView .l-open { color: #2f9c8b; font-weight: 600; }
+#psLogView .l-ERROR { color: #d9534f; }
+#psLogView .l-DEBUG { color: #7d8590; }

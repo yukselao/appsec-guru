@@ -45,6 +45,21 @@ FIELDS = {
     "ai.ctx_chars": ("24000", False, "AI_CTX_CHARS"),
     "ai.num_ctx": ("16384", False, "AI_NUM_CTX"),
     "ai.system_prompt": (AI_DEFAULT_PROMPT, False, "AI_SYSTEM_PROMPT"),
+    "recon.httpx_timeout": ("10", False, "RECON_HTTPX_TIMEOUT"),
+    "recon.httpx_threads": ("50", False, "RECON_HTTPX_THREADS"),
+    "recon.httpx_rate_limit": ("150", False, "RECON_HTTPX_RATE_LIMIT"),
+    "recon.httpx_retries": ("0", False, "RECON_HTTPX_RETRIES"),
+    "recon.idle_timeout": ("180", False, "RECON_IDLE_TIMEOUT"),
+    "recon.stage_timeout": ("900", False, "RECON_STAGE_TIMEOUT"),
+}
+# key -> (min, max) of whole-number settings; checked on save and clamped on use
+INT_LIMITS = {
+    "recon.httpx_timeout": (1, 120),
+    "recon.httpx_threads": (1, 300),
+    "recon.httpx_rate_limit": (1, 1000),
+    "recon.httpx_retries": (0, 5),
+    "recon.idle_timeout": (30, 1800),
+    "recon.stage_timeout": (60, 3600),
 }
 SECRET_MASK = "__SET__"
 
@@ -116,10 +131,33 @@ def get_all(include_secrets=False):
     return out
 
 
+def get_int(key, values=None):
+    """A whole-number setting inside its limits; the default when it is not a number."""
+    lo, hi = INT_LIMITS[key]
+    try:
+        n = int((values or get_all())[key])
+    except (TypeError, ValueError):
+        n = int(FIELDS[key][0])
+    return max(lo, min(n, hi))
+
+
+def _check_ints(values):
+    for key, (lo, hi) in INT_LIMITS.items():
+        if key not in values:
+            continue
+        try:
+            good = lo <= int(str(values[key]).strip()) <= hi
+        except ValueError:
+            good = False
+        if not good:
+            raise ValueError("{} must be a whole number from {} to {}".format(key, lo, hi))
+
+
 def save(values, client_ip=None):
     """Saves known keys. A secret equal to SECRET_MASK keeps the stored value;
-    an empty secret clears it."""
+    an empty secret clears it. Raises ValueError on an out-of-range number."""
     global _version
+    _check_ints(values)
     changed = []
     with _lock, session_scope() as s:
         for key, val in values.items():

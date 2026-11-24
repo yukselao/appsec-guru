@@ -237,6 +237,13 @@ def _by_status(hits):
     return out
 
 
+def summary(r):
+    """History row: the number of hits instead of the hits."""
+    out = row(r)
+    out["found"] = len(out.pop("hits") or [])
+    return out
+
+
 def row(r):
     return {"id": r.id, "target_url": r.target_url, "wordlist": r.wordlist, "extensions": r.extensions,
             "methods": r.methods, "match_codes": r.match_codes, "filter_codes": r.filter_codes, "threads": r.threads,

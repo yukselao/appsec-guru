@@ -1,6 +1,6 @@
 (function ($, WT) {
   'use strict';
-  let watchId = null, timer = null;
+  let watchId = null, timer = null, lastActive = null;
   const CODE = s => { s = String(s || ''); return s[0] === '2' ? 'success' : s[0] === '3' ? 'primary' : s === '403' || s === '401' ? 'warning' : s[0] === '5' ? 'dark' : 'secondary'; };
 
   function stages(stage, status) {
@@ -34,23 +34,45 @@
     }).join('') : `<tr><td colspan="4" class="empty px-3">${r.active ? 'Working…' : 'No subdomains found.'}</td></tr>`);
   }
 
-  function watch(id) { watchId = id; clearInterval(timer); const tick = () => WT.get('/subdomains/' + id).then(r => { render(r); if (!r.active) { clearInterval(timer); runs(); } }); tick(); timer = setInterval(tick, 2500); }
+  const url = WT.runUrl('subdomains', id => watch(id), () => stop());
+  function stop() {
+    clearInterval(timer); watchId = null;
+    $('#sdState, #sdStats, #sdStages').empty(); $('#sdCancel, #sdExport').prop('disabled', true);
+    $('#sdResults').html('<tr><td colspan="4" class="empty px-3">Start a discovery or open one from the history.</td></tr>');
+    runs();
+  }
+  function watch(id) {
+    watchId = id; clearInterval(timer);
+    const tick = first => WT.get('/subdomains/' + id).then(r => {
+      if (id !== watchId) return;
+      render(r); if (!r.active) clearInterval(timer);
+      if (first || r.active !== lastActive || r.active) runs();
+      lastActive = r.active;
+    }).catch(e => { if (id !== watchId) return; url.clear(); stop(); WT.fail(e, 'Run #' + id); });
+    tick(true); timer = setInterval(tick, 2500);
+  }
   function runs() {
-    WT.get('/subdomains?limit=30').then(r => {
-      $('#sdRuns').html(r.runs.length ? r.runs.map(x => `<li class="list-group-item d-flex align-items-center gap-2 ${x.id === watchId ? 'active-row' : ''}">
-        <a href="#" data-open="${x.id}" class="text-truncate">${WT.esc(x.domain)}</a>${WT.statusBadge(x.status)}
-        <span class="badge text-bg-light border ms-auto">${(x.stats || {}).subdomains ?? 0}</span>
-        <button class="btn btn-sm btn-link text-danger p-0" data-del="${x.id}" ${x.active ? 'disabled' : ''}>✕</button></li>`).join('')
+    return WT.get('/subdomains?limit=200').then(r => {
+      $('#sdRuns').html(r.runs.length ? r.runs.map(x => { const st = x.stats || {};
+        return `<li class="list-group-item ${x.id === watchId ? 'active-row' : ''}">
+        <div class="d-flex align-items-center gap-2">
+          <a href="/subdomains/${x.id}" data-open="${x.id}" class="text-truncate" title="Run #${x.id}">${WT.esc(x.domain)}</a>${WT.statusBadge(x.status)}
+          ${x.error ? `<span class="badge text-bg-warning" title="${WT.esc(x.error)}">!</span>` : ''}
+          <button class="btn btn-sm btn-link text-danger p-0 ms-auto" data-del="${x.id}" aria-label="Delete run #${x.id}" ${x.active ? 'disabled' : ''}>✕</button></div>
+        <div class="text-body-secondary">#${x.id} · ${WT.dt(x.created_at)} · ${x.finished_at || x.active ? WT.dur(x.created_at, x.finished_at) : '-'}</div>
+        <div class="text-body-secondary">${st.subdomains ?? 0} found${st.resolved != null ? ` · ${st.resolved} resolved` : ''}${st.live_http != null && (x.options || {}).probe_http ? ` · ${st.live_http} live` : ''}</div></li>`; }).join('')
         : '<li class="list-group-item empty">No runs yet.</li>');
+      $('#sdRunsCount').text(r.runs.length);
+      return r.runs;
     });
   }
 
   $('#sdForm').on('submit', function (e) {
     e.preventDefault();
-    const body = {domain: $('#sdDomain').val().trim(), resolve: $('#sdResolve').prop('checked'), probe_http: $('#sdHttp').prop('checked'), timeout: parseInt($('#sdTimeout').val() || '300', 10)};
+    const body = {domain: $('#sdDomain').val().trim(), resolve: $('#sdResolve').prop('checked'), probe_http: $('#sdHttp').prop('checked'), timeout: parseInt($('#sdTimeout').val(), 10) || null};
     if (!body.domain) { WT.warn('Enter a domain'); return; }
     $('#sdGo').prop('disabled', true);
-    WT.post('/subdomains', body).then(r => { WT.ok('Discovery #' + r.run_id + ' started'); watch(r.run_id); runs(); }).catch(e => WT.fail(e)).always(() => $('#sdGo').prop('disabled', false));
+    WT.post('/subdomains', body).then(r => { WT.ok('Discovery #' + r.run_id + ' started'); url.push(r.run_id); watch(r.run_id); }).catch(e => WT.fail(e)).always(() => $('#sdGo').prop('disabled', false));
   });
   $('#sdSearch, #sdFilter').on('input change', () => { if (watchId) WT.get('/subdomains/' + watchId).then(render); });
   $('#sdCancel').on('click', () => { if (watchId) WT.post('/subdomains/' + watchId + '/cancel').then(() => WT.ok('Cancel requested')); });
@@ -58,9 +80,12 @@
     const txt = (r.results || []).map(x => [x.host, (x.a || []).join(','), (x.http || []).map(h => h.url + ' [' + h.status + ']').join(' ')].join('\t')).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], {type: 'text/plain'})); a.download = `subdomains-${r.domain}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }); });
-  $(document).on('click', '[data-open]', function (e) { e.preventDefault(); watch(parseInt($(this).data('open'), 10)); });
-  $(document).on('click', '[data-del]', function () { const id = $(this).data('del'); if (!confirm('Delete run #' + id + '?')) return; WT.api('DELETE', '/subdomains/' + id).then(() => { if (watchId === id) { clearInterval(timer); watchId = null; } WT.ok('Deleted'); runs(); }).catch(e => WT.fail(e)); });
+  $(document).on('click', '[data-open]', function (e) { e.preventDefault(); const id = parseInt($(this).data('open'), 10); url.push(id); watch(id); });
+  $(document).on('click', '[data-del]', function () { const id = $(this).data('del'); if (!confirm('Delete run #' + id + '?')) return; WT.api('DELETE', '/subdomains/' + id).then(() => { WT.ok('Deleted'); if (watchId === id) { url.clear(); stop(); } else runs(); }).catch(e => WT.fail(e)); });
 
   const d = new URLSearchParams(location.search).get('domain'); if (d) $('#sdDomain').val(d);
-  runs();
+  WT.get('/settings').then(r => { $('#sdTimeout').attr('placeholder', r.settings['recon.stage_timeout']); }).catch(() => {});
+  // open the run in the address, else the one that is running now
+  if (url.current()) watch(url.current());
+  else runs().then(list => { const on = list.find(x => x.active); if (on && !watchId) watch(on.id); });
 })(jQuery, window.WT);

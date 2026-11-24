@@ -1,6 +1,6 @@
 (function ($, WT) {
   'use strict';
-  let watchId = null, watchTimer = null;
+  let watchId = null, watchTimer = null, lastActive = null;
   const CODE = s => { s = String(s); return s[0] === '2' ? 'success' : s[0] === '3' ? 'primary' : s === '403' || s === '401' ? 'warning' : s[0] === '5' ? 'dark' : 'secondary'; };
 
   function wordlists() {
@@ -41,23 +41,36 @@
     }
   }
 
+  const url = WT.runUrl('hidden-paths', id => watch(id), () => stop());
+  function stop() {
+    clearInterval(watchTimer); watchId = null;
+    $('#fzState, #fzStats').empty(); $('#fzCancel, #fzExport').prop('disabled', true); $('#fzProg').css('width', 0);
+    $('#fzHits').html('<tr><td colspan="6" class="empty px-3">Start a discovery or open one from the history.</td></tr>');
+    runs();
+  }
   function watch(id) {
-    watchId = id;
-    clearInterval(watchTimer);
-    const tick = () => WT.get('/fuzz/' + id).then(r => { renderRun(r); if (!r.active) { clearInterval(watchTimer); runs(); } });
-    tick();
-    watchTimer = setInterval(tick, 2000);
+    watchId = id; clearInterval(watchTimer);
+    const tick = first => WT.get('/fuzz/' + id).then(r => {
+      if (id !== watchId) return;
+      renderRun(r);
+      if (!r.active && r.status !== 'pending') clearInterval(watchTimer);   // "pending": ffuf is about to start
+      if (first || r.active !== lastActive || r.active) runs();
+      lastActive = r.active;
+    }).catch(e => { if (id !== watchId) return; url.clear(); stop(); WT.fail(e, 'Run #' + id); });
+    watchTimer = setInterval(tick, 2000); tick(true);
   }
 
   function runs() {
-    WT.get('/fuzz?limit=30').then(r => {
+    return WT.get('/fuzz?limit=200').then(r => {
       $('#fzRuns').html(r.runs.length ? r.runs.map(x => `<tr class="${x.id === watchId ? 'table-active' : ''}">
-        <td><a href="#" data-open="${x.id}">${x.id}</a></td><td class="small mono text-truncate" style="max-width:240px">${WT.esc(x.target_url)}</td>
-        <td class="small">${WT.esc(x.wordlist)}</td><td>${WT.statusBadge(x.status)}</td><td>${(x.stats || {}).found ?? x.hits.length}</td>
-        <td class="small">${WT.dt(x.created_at)}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="#" data-open="${x.id}">Open</a>
+        <td><a href="/hidden-paths/${x.id}" data-open="${x.id}">${x.id}</a></td><td class="small mono text-truncate" style="max-width:240px" title="${WT.esc(x.target_url)}">${WT.esc(x.target_url)}</td>
+        <td class="small">${WT.esc(x.wordlist)}</td><td title="${WT.esc(x.error || '')}">${WT.statusBadge(x.status)}</td><td>${x.found}</td>
+        <td class="small text-nowrap">${WT.dt(x.created_at)}</td><td class="small text-nowrap">${x.finished_at || x.active ? WT.dur(x.created_at, x.finished_at) : '-'}</td>
+        <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" href="/hidden-paths/${x.id}" data-open="${x.id}">Open</a>
           <button class="btn btn-sm btn-outline-danger" data-del="${x.id}" ${x.active ? 'disabled' : ''}>Delete</button></td></tr>`).join('')
-        : '<tr><td colspan="7" class="empty px-3">No discovery runs yet.</td></tr>');
+        : '<tr><td colspan="8" class="empty px-3">No discovery runs yet.</td></tr>');
+      $('#fzRunsCount').text(r.runs.length);
+      return r.runs;
     });
   }
 
@@ -71,7 +84,7 @@
       threads: parseInt($('#fzThreads').val() || '40', 10), rate: parseInt($('#fzRate').val() || '0', 10), extra_headers: headers};
     if (!/^https?:\/\//.test(body.target_url)) { WT.warn('Enter a target URL'); return; }
     $('#fzGo').prop('disabled', true);
-    WT.post('/fuzz', body).then(r => { WT.ok('Discovery #' + r.run_id + ' started'); watch(r.run_id); runs(); })
+    WT.post('/fuzz', body).then(r => { WT.ok('Discovery #' + r.run_id + ' started'); url.push(r.run_id); watch(r.run_id); })
       .catch(e => WT.fail(e)).always(() => $('#fzGo').prop('disabled', false));
   });
   $('#fzSearch').on('input', () => { if (watchId) WT.get('/fuzz/' + watchId).then(renderRun); });
@@ -81,10 +94,10 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], {type: 'text/plain'}));
     a.download = `hidden-paths-${watchId}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }); });
-  $(document).on('click', '[data-open]', function (e) { e.preventDefault(); watch(parseInt($(this).data('open'), 10)); });
+  $(document).on('click', '[data-open]', function (e) { e.preventDefault(); const id = parseInt($(this).data('open'), 10); url.push(id); watch(id); });
   $(document).on('click', '[data-del]', function () {
     const id = $(this).data('del'); if (!confirm('Delete discovery run #' + id + '?')) return;
-    WT.api('DELETE', '/fuzz/' + id).then(() => { WT.ok('Deleted'); if (watchId === id) { clearInterval(watchTimer); watchId = null; } runs(); }).catch(e => WT.fail(e));
+    WT.api('DELETE', '/fuzz/' + id).then(() => { WT.ok('Deleted'); if (watchId === id) { url.clear(); stop(); } else runs(); }).catch(e => WT.fail(e));
   });
   $(document).on('click', '[data-del-wl]', function () {
     const n = $(this).data('del-wl'); if (!confirm('Delete wordlist ' + n + '?')) return;
@@ -114,5 +127,8 @@
 
   const t = new URLSearchParams(location.search).get('target');
   if (t) $('#fzUrl').val(t);
-  wordlists(); runs();
+  wordlists();
+  // open the run in the address, else the one that is running now
+  if (url.current()) watch(url.current());
+  else runs().then(list => { const on = list.find(x => x.active); if (on && !watchId) watch(on.id); });
 })(jQuery, window.WT);

@@ -24,6 +24,7 @@
   <div class="col-xl-8">
     <div class="card">
       <div class="card-header d-flex align-items-center">Open ports <span id="psState" class="ms-2"></span>
+        <a href="#" class="small ms-2 d-none" id="psLogOpen">Log &#8599;</a>
         <div class="ms-auto d-flex gap-2"><button class="btn btn-sm btn-outline-secondary" id="psExport" disabled>Export</button>
           <button class="btn btn-sm btn-outline-danger" id="psCancel" disabled>Cancel</button></div>
       </div>
@@ -34,5 +35,16 @@
     </div>
   </div>
 </div>
+<div class="modal fade" id="psLogModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Live scan log <span class="mono small text-body-secondary ms-1" id="psLogTitle"></span></h5>
+      <span class="badge text-bg-secondary ms-2" id="psLogState">idle</span>
+      <div class="form-check form-switch ms-auto me-2 mb-0"><input class="form-check-input" type="checkbox" id="psLogScroll" checked><label class="form-check-label small" for="psLogScroll">Follow</label></div>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body p-0"><pre class="code mb-0 p-3" id="psLogView" style="min-height:50vh;max-height:70vh;overflow:auto"></pre></div>
+  </div>
+</div></div>
 {% endblock %}
 {% block scripts %}<script src="{{ asset('pages/portscan.js') }}"></script>{% endblock %}

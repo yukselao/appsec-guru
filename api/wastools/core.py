@@ -356,8 +356,36 @@ class SC(object):
         out = []
         for r in rows:
             tpl = r.get("policyTemplate") or {}
-            if str(tpl.get("id")) == WAS_TEMPLATE_ID or "web app" in str(tpl.get("name", "")).lower():
+            if (str(tpl.get("id")) == WAS_TEMPLATE_ID or str(tpl.get("isWas", "")).lower() == "true"
+                    or "web app" in str(tpl.get("name", "")).lower()):
                 out.append(r)
+        return out
+
+    # ---- WAS policy templates (the cards on SC's "Add Policy" page)
+    def was_templates(self):
+        """Every Web Application Scanning policy template with its options,
+        flattened from the template's editor definition."""
+        out = []
+        for t in self.as_list(self.get("policyTemplate", fields="id,name,description")):
+            try:
+                full = self.get("policyTemplate/{}".format(t["id"]), fields="id,name,description,editor")
+                ed = json.loads(full.get("editor") or "{}")
+            except (SCError, ValueError):
+                continue
+            if ed.get("category") != "webApplicationScanning" or ed.get("status", "enabled") != "enabled":
+                continue
+            sections = []
+            for sec in ed.get("sections") or []:
+                if sec.get("id") == "setup":
+                    continue
+                inputs = []
+                _template_inputs(sec, sec.get("name") or "", None, inputs)
+                if inputs:
+                    sections.append({"id": sec.get("id"), "name": sec.get("name"), "inputs": inputs})
+            out.append({"id": str(full.get("id")), "name": full.get("name"), "description": full.get("description") or "",
+                        "plugins": str(ed.get("plugins", "")).lower() == "true",
+                        "credentials": str(ed.get("allowsCredentialsUse", "")).lower() == "true",
+                        "sections": sections})
         return out
 
     def policy(self, pid, fields=None):
@@ -838,3 +866,39 @@ def scan_status_line(res, t0):
     el = int(time.time() - t0)
     return "[{:02d}:{:02d}] scanResult {} status={} running={}{} {}".format(
         el // 60, el % 60, res.get("id"), st, res.get("running"), checks, extra).rstrip()
+
+
+# ---- policy template helpers
+TEMPLATE_SKIP_INPUTS = ("name", "description", "was_debug_mode", "was[debug_config]")
+
+
+def _pref_default(inp):
+    d = inp.get("default")
+    if inp.get("type") == "checkbox":
+        return "yes" if d in (True, "yes", "true") else "no"
+    return "" if d is None or d is False else str(d)
+
+
+def _template_inputs(node, group, when, out):
+    """Walk a template editor node, collecting option inputs. Inputs revealed by a
+    checkbox (conditionalSettings) carry `when` = {id, value} of that checkbox."""
+    group = node.get("name") or group
+    for inp in node.get("inputs") or []:
+        iid, typ = inp.get("id"), inp.get("type")
+        if not iid or iid in TEMPLATE_SKIP_INPUTS:
+            continue
+        if typ != "file":           # file uploads cannot be set through this API
+            opts = []
+            for o in inp.get("options") or []:
+                if isinstance(o, dict):
+                    val = o.get("id", o.get("name"))
+                    opts.append({"value": str(val), "label": o.get("hint") or o.get("label") or str(val)})
+                else:
+                    opts.append({"value": str(o), "label": str(o)})
+            out.append({"id": iid, "name": inp.get("name") or inp.get("placeholder") or iid, "type": typ,
+                        "default": _pref_default(inp), "options": opts, "group": group,
+                        "hint": inp.get("hint") or "", "tooltip": inp.get("tooltip") or "", "when": when})
+        for val, cond in (inp.get("conditionalSettings") or {}).items():
+            _template_inputs(dict(cond, name=None), group, {"id": iid, "value": str(val)}, out)
+    for sub in node.get("subsections") or []:
+        _template_inputs(sub, group, when, out)

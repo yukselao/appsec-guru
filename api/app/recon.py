@@ -6,6 +6,7 @@ import os
 import re
 import socket
 import threading
+import time
 
 from sqlalchemy import select
 
@@ -33,22 +34,38 @@ def _hostport(hp):
 SENTINEL = "__END__"
 
 
-def stream_tool(hp, lines, timeout=300):
+# Optional first request line with "key=value" pairs; only httpx reads it.
+OPTS = "__OPTS__"
+HTTPX_OPTS = ("timeout", "threads", "rate_limit", "retries")
+
+
+def stream_tool(hp, lines, idle=180, total=900):
+    """Returns (output, reason). reason is None when the tool finished, else why
+    reading stopped early: the output is then incomplete."""
     host, port = _hostport(hp)
+    reason = None
+    deadline = time.monotonic() + total
     s = socket.create_connection((host, port), timeout=15)
     try:
         s.sendall(("\n".join(lines) + "\n" + SENTINEL + "\n").encode("utf-8"))
-        s.settimeout(timeout)
         buf = b""
         while True:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                reason = "reached the stage limit of {} s".format(total)
+                break
+            s.settimeout(min(idle, left))
             try:
                 chunk = s.recv(65536)
             except socket.timeout:
+                if time.monotonic() >= deadline:
+                    continue
+                reason = "sent nothing for {} s".format(idle)
                 break
             if not chunk:
                 break
             buf += chunk
-        return buf.decode("utf-8", "replace")
+        return buf.decode("utf-8", "replace"), reason
     finally:
         s.close()
 
@@ -85,8 +102,12 @@ def start(params, client_ip=None):
     domain = re.sub(r"^\w+://", "", domain).split("/")[0]
     if not DOMAIN_RX.match(domain):
         raise ValueError("enter a valid domain, e.g. example.com")
+    cfg = st.get_all()
+    if params.get("timeout"):
+        cfg["recon.stage_timeout"] = params["timeout"]  # per-run override from the form
     opts = {"resolve": params.get("resolve", True), "probe_http": params.get("probe_http", True),
-            "timeout": max(60, min(int(params.get("timeout") or 300), 900))}
+            "timeout": st.get_int("recon.stage_timeout", cfg), "idle": st.get_int("recon.idle_timeout", cfg),
+            "httpx": {k: st.get_int("recon.httpx_" + k, cfg) for k in HTTPX_OPTS}}
     with session_scope() as s:
         r = SubdomainRun(domain=domain, status="pending", options=opts)
         s.add(r)
@@ -101,10 +122,19 @@ def start(params, client_ip=None):
 
 
 def _run(run_id, domain, opts, cancel_ev):
-    t = opts["timeout"]
+    limits = {"idle": opts["idle"], "total": opts["timeout"]}
+    cut = []  # stages that stopped before the tool finished
+
+    def tool(stage, hp, lines):
+        out, reason = stream_tool(hp, lines, **limits)
+        if reason:
+            cut.append("{} {}".format(stage, reason))
+            log.warning("recon %s: %s %s", run_id, stage, reason)
+        return out
+
     try:
         update(run_id, status="running", stage="subfinder")
-        sub = stream_tool(SUBFINDER, [domain], timeout=t)
+        sub = tool("subfinder", SUBFINDER, [domain])
         subs = sorted(set(l.strip() for l in sub.splitlines() if l.strip() and "." in l))
         update(run_id, subdomains=subs, stats={"subdomains": len(subs)})
         if cancel_ev.is_set():
@@ -113,7 +143,7 @@ def _run(run_id, domain, opts, cancel_ev):
         by_host = {h: {"host": h} for h in subs}
         if opts["resolve"] and subs:
             update(run_id, stage="dnsx")
-            dns = stream_tool(DNSX, subs, timeout=t)
+            dns = tool("dnsx", DNSX, subs)
             for line in dns.splitlines():
                 line = line.strip()
                 if not line.startswith("{"):
@@ -127,12 +157,17 @@ def _run(run_id, domain, opts, cancel_ev):
                     by_host[h].update({"a": d.get("a") or [], "aaaa": d.get("aaaa") or [], "cname": d.get("cname") or [],
                                        "mx": d.get("mx") or [], "ns": d.get("ns") or [], "txt": d.get("txt") or [],
                                        "resolved": True})
+            update(run_id, results=sorted(by_host.values(), key=lambda r: r["host"]),
+                   stats={"subdomains": len(subs), "resolved": sum(1 for r in by_host.values() if r.get("resolved"))})
         if cancel_ev.is_set():
             _finalize(run_id, by_host, "cancelled")
             return
         if opts["probe_http"] and subs:
             update(run_id, stage="httpx")
-            http = stream_tool(HTTPX, subs, timeout=t)
+            # the tool also stops itself, shortly after the api stops reading
+            head = " ".join([OPTS] + ["{}={}".format(k, opts["httpx"][k]) for k in HTTPX_OPTS] +
+                            ["max={}".format(opts["timeout"] + 5)])
+            http = tool("httpx", HTTPX, [head] + subs)
             for line in http.splitlines():
                 line = line.strip()
                 if not line.startswith("{"):
@@ -148,6 +183,8 @@ def _run(run_id, domain, opts, cancel_ev):
                         "url": d.get("url"), "status": d.get("status_code") or d.get("status-code"),
                         "title": d.get("title"), "tech": d.get("tech") or d.get("technologies") or [],
                         "webserver": d.get("webserver")})
+        if cut:
+            update(run_id, error="Results are incomplete: {}. Raise the limits in Settings > Subdomain Discovery.".format("; ".join(cut)))
         _finalize(run_id, by_host, "completed")
     except (OSError, socket.error) as exc:
         update(run_id, status="failed", error="recon tool unreachable ({}). Are the recon-* containers running?".format(exc),
@@ -172,6 +209,11 @@ def _finalize(run_id, by_host, status):
 def _now():
     import datetime
     return datetime.datetime.now(datetime.timezone.utc)
+
+
+def summary(r):
+    """History row: everything except the (large) result lists."""
+    return {k: v for k, v in row(r).items() if k not in ("subdomains", "results")}
 
 
 def row(r):

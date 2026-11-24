@@ -48,6 +48,15 @@
     es = new EventSource('/api/logs/stream?' + p.toString());
     state('connecting', 'warning');
     es.onopen = () => { state('live', 'success'); WT.toast('Log stream connected'); };
+    es.addEventListener('meta', ev => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      const via = m.jump ? ` via ${WT.esc(m.jump)}` : '';
+      const flt = m.uuid ? `scanUuid=${WT.esc(m.uuid.slice(0, 8))}…` : 'whole log';
+      $('#lgSource').removeClass('d-none').html(
+        `Live tail of <span class="mono">${WT.esc(m.path)}</span> on <b>${WT.esc(m.sensor || 'sensor')}</b> ` +
+        `(<span class="mono">${WT.esc(m.user)}@${WT.esc(m.host)}:${m.port}</span>${via}, ${WT.esc(m.method)} ssh) ` +
+        `&middot; <span class="mono">${WT.esc(m.cmd)}</span> &middot; filter: ${flt}`);
+    });
     es.onerror = () => state('disconnected, retrying', 'danger');
     es.onmessage = ev => {
       if (paused) return;
@@ -60,6 +69,7 @@
   }
   function stop() {
     if (es) { es.close(); es = null; }
+    $('#lgSource').addClass('d-none');
     state('off', 'secondary'); $('#lgStop,#lgPause').prop('disabled', true);
     paused = false; $('#lgPause').text('Pause');
   }

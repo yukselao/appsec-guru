@@ -1,5 +1,5 @@
 {% extends 'base.html.twig' %}
-{% macro field(key, label, type, help, cls) %}
+{% macro field(key, label, type, help, cls, min, max) %}
 <div class="{{ cls|default('col-md-6') }}">
   <label class="form-label d-flex align-items-center gap-2" for="s_{{ key|replace({'.': '_'}) }}">{{ label }}<span class="badge src-badge" data-src="{{ key }}"></span></label>
   {% if type == 'checkbox' %}
@@ -7,7 +7,7 @@
   {% elseif type == 'textarea' %}
     <textarea class="form-control" rows="6" data-key="{{ key }}" id="s_{{ key|replace({'.': '_'}) }}"></textarea>
   {% else %}
-    <input class="form-control" type="{{ type|default('text') }}" data-key="{{ key }}" id="s_{{ key|replace({'.': '_'}) }}" autocomplete="off" {% if type == 'password' %}data-secret="1"{% endif %}>
+    <input class="form-control" type="{{ type|default('text') }}" data-key="{{ key }}" id="s_{{ key|replace({'.': '_'}) }}" autocomplete="off" {% if type == 'password' %}data-secret="1"{% endif %}{% if min is not null %} min="{{ min }}" max="{{ max }}" step="1"{% endif %}>
   {% endif %}
   {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
 </div>
@@ -21,6 +21,7 @@
   <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tSc" type="button">Security Center</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tSsh" type="button">WAS scanner (SSH)</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAi" type="button">AI (Ollama)</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tRecon" type="button">Subdomain Discovery</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tAudit" type="button" id="tAuditBtn">Audit</button></li>
 </ul>
 <div class="tab-content">
@@ -77,6 +78,22 @@
     <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="ai">Save</button>
       <button class="btn btn-outline-secondary" data-test="ai">Test connection and model</button>
       <button class="btn btn-outline-warning ms-auto" data-reset="ai">Revert to .env</button></div>
+  </div>
+
+  <div class="tab-pane fade" id="tRecon" data-section="recon">
+    <div class="card mb-3"><div class="card-header">HTTP probing (httpx)</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.httpx_timeout', 'Request timeout (s)', 'number', 'How long to wait for one host. Default 10, 1 to 120.', 'col-md-3', 1, 120) }}
+      {{ f.field('recon.httpx_threads', 'Parallel threads', 'number', 'Hosts probed at the same time. Default 50, 1 to 300.', 'col-md-3', 1, 300) }}
+      {{ f.field('recon.httpx_rate_limit', 'Requests per second (max)', 'number', 'Upper limit for all threads together. Default 150, 1 to 1000.', 'col-md-3', 1, 1000) }}
+      {{ f.field('recon.httpx_retries', 'Retries', 'number', 'Extra attempts after a failed request. Default 0, 0 to 5.', 'col-md-3', 0, 5) }}
+    </div></div></div>
+    <div class="card mb-3"><div class="card-header">Limits for every stage (subfinder, dnsx, httpx)</div><div class="card-body"><div class="row g-3">
+      {{ f.field('recon.idle_timeout', 'Idle limit (s)', 'number', 'Stop a stage when its tool sends nothing for this long. Default 180, 30 to 1800.', 'col-md-6', 30, 1800) }}
+      {{ f.field('recon.stage_timeout', 'Stage limit (s)', 'number', 'Longest time one stage may take. Default 900, 60 to 3600. A run can override it on the Subdomain Discovery page.', 'col-md-6', 60, 3600) }}
+    </div></div></div>
+    <div class="alert alert-light border small">New values apply to the next discovery. When a limit stops a stage early, the run shows that its results are incomplete.</div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" data-save="recon">Save</button>
+      <button class="btn btn-outline-warning ms-auto" data-reset="recon">Revert to .env</button></div>
   </div>
 
   <div class="tab-pane fade" id="tAudit">

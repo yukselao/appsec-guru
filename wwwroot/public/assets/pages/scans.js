@@ -1,8 +1,8 @@
 (function ($, WT) {
   'use strict';
-  const S = {scans: {}, folders: [], families: [], policies: [], sensors: [], repos: [], zones: [], creds: [], reports: [], folder: 'all', step: 1, editing: null};
+  const S = {scans: {}, templates: [], tpl: null, over: {}, folders: [], families: [], policies: [], sensors: [], repos: [], zones: [], creds: [], reports: [], folder: 'all', step: 1, editing: null};
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const STEPS = 5;
+  const STEPS = 6;
 
   const ICO = {
     folder: '<svg class="ic" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
@@ -90,7 +90,7 @@
       <td><input type="checkbox" class="form-check-input scanchk" value="${p.id}" aria-label="Select ${WT.esc(p.name)}"></td>
       <td style="min-width:150px"><div class="d-flex align-items-center gap-2"><span class="fw-semibold">${WT.esc(p.name)}</span>${p.enabled ? '' : '<span class="badge text-bg-secondary">disabled</span>'}</div>${p.description ? `<div class="small text-body-secondary">${WT.esc(p.description)}</div>` : ''}</td>
       <td><span class="mono small text-truncate d-inline-block align-middle scan-target" title="${WT.esc(p.target_url)}">${WT.esc(p.target_url)}</span></td>
-      <td class="small text-nowrap">${WT.esc(p.source_policy_id)} <span class="text-body-secondary">· ${p.families.length ? p.families.length + ' families' : 'policy families'}</span><div class="text-body-secondary">debug ${WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode)}</div></td>
+      <td class="small text-nowrap">${policyLabel(p)} <span class="text-body-secondary">· ${famLabel(p)}</span><div class="text-body-secondary">debug ${WT.esc(p.debug_mode === 'none' ? 'off' : p.debug_mode)}</div></td>
       <td class="small text-nowrap"><span class="badge rounded-pill ${schedCls}">${WT.esc(p.schedule_text)}</span>${p.next_run_at ? `<div class="text-body-secondary mt-1">next ${new Date(p.next_run_at).toLocaleString('en-GB', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'})}</div>` : ''}</td>
       <td class="small text-nowrap">${lastCell}</td>
       <td class="text-end text-nowrap">
@@ -117,6 +117,147 @@
         : '<li class="list-group-item empty">No scan running.</li>');
     }).catch(() => {});
   }
+
+
+  // ------------------------------------------------- custom scan (templates)
+  // What each Tenable WAS template is for, in plain words. Keyed by template name.
+  const TPL_INFO = {
+    'Quick Scan': {tag: 'Fastest', order: 1, text: 'A high-level look at security headers and exposed configuration. Nothing to configure, no login.'},
+    'Web App Overview': {tag: 'Fast', order: 2, text: 'Crawls the application and builds a site map. No active attacks are sent.'},
+    'Scan': {tag: 'Most thorough', order: 3, text: 'Full crawl plus active vulnerability tests. Tune it with Speed and the checks below.'},
+    'SSL_TLS': {tag: 'Fast', order: 4, text: 'Audits only the SSL/TLS setup of the target. Does not crawl.'},
+    'Web App Config Audit': {tag: 'Fast', order: 5, text: 'Checks security headers and configuration against best practice.'},
+    'API': {tag: '', order: 6, text: 'Tests an API described by an OpenAPI (v2/v3) file URL.'},
+    'PCI': {tag: 'Compliance', order: 7, text: 'PCI ASV assessment scan.'},
+  };
+  // Speed presets only touch the options a template really has.
+  const SPEEDS = [
+    {id: 'smoke', name: 'Smoke test', text: '10 pages, 10 minutes. Proves the scan works.',
+      set: {'was[scope]page_limit': '10', 'was_timeout': '00:10:00', 'was[scope]directory_depth_limit': '3', 'was[scope]dom_depth_limit': '2'}},
+    {id: 'fast', name: 'Fast', text: '150 pages, 45 minutes. A good first look.',
+      set: {'was[scope]page_limit': '150', 'was_timeout': '00:45:00', 'was[scope]directory_depth_limit': '4', 'was[scope]dom_depth_limit': '3'}},
+    {id: 'standard', name: 'Standard', text: 'The template defaults. Full coverage.', set: {}},
+  ];
+  const SPEED_KEYS = ['was[scope]page_limit', 'was_timeout', 'was[scope]directory_depth_limit', 'was[scope]dom_depth_limit'];
+  const FAM_PRESETS = [
+    {name: 'All', pick: () => true},
+    {name: 'Injection & XSS', pick: n => /injection|cross site scripting|code execution|file inclusion/i.test(n)},
+    {name: 'Authentication', pick: n => /authentication|request forgery/i.test(n)},
+    {name: 'Headers & TLS', pick: n => /ssl|security header|web servers/i.test(n)},
+    {name: 'None', pick: () => false},
+  ];
+
+  const isTpl = v => String(v || '').indexOf('template:') === 0;
+  const tplById = id => S.templates.find(t => String(t.id) === String(id));
+  const tplInputs = t => (t ? t.sections : []).reduce((a, sec) => a.concat(sec.inputs), []);
+  const HIDDEN_INPUTS = ['was_openapi_toggle'];
+  function policyLabel(p) {
+    if (isTpl(p.source_policy_id)) {
+      const t = tplById(p.source_policy_id.split(':')[1]);
+      return `<span class="badge text-bg-light border">Custom</span> ${WT.esc(t ? t.name : 'template ' + p.source_policy_id.split(':')[1])}`;
+    }
+    const pol = S.policies.find(x => String(x.id) === String(p.source_policy_id));
+    return pol ? `<span title="Policy ${WT.esc(p.source_policy_id)}">${WT.esc(pol.name)}</span>` : WT.esc(p.source_policy_id);
+  }
+  function famLabel(p) {
+    if (p.families.length) return p.families.length + ' families';
+    if (!isTpl(p.source_policy_id)) return 'policy families';
+    const t = tplById(p.source_policy_id.split(':')[1]);
+    return t && !t.plugins ? 'fixed checks' : 'all families';
+  }
+  const mode = () => $('input[name=pmMode]:checked').val();
+  function optVal(inp) { return Object.prototype.hasOwnProperty.call(S.over, inp.id) ? S.over[inp.id] : inp.default; }
+
+  function renderTemplates() {
+    if (!S.templates.length) return;
+    const list = S.templates.slice().sort((a, b) => ((TPL_INFO[a.name] || {}).order || 99) - ((TPL_INFO[b.name] || {}).order || 99));
+    $('#pmTemplates').html(list.map(t => { const i = TPL_INFO[t.name] || {};
+      return `<div class="col"><label class="card h-100 opt-card"><div class="card-body d-flex gap-2 py-2">
+        <input class="form-check-input mt-1" type="radio" name="pmTpl" value="${WT.esc(t.id)}" ${String(S.tpl) === String(t.id) ? 'checked' : ''}>
+        <div><div class="fw-semibold">${WT.esc(t.name)} ${i.tag ? `<span class="badge rounded-pill text-bg-light border fw-normal">${WT.esc(i.tag)}</span>` : ''}</div>
+        <div class="small text-body-secondary">${WT.esc(i.text || t.description)}</div></div></div></label></div>`; }).join(''));
+  }
+
+  function inputHtml(inp, n) {
+    const v = optVal(inp), id = 'po' + n, pref = `data-pref="${WT.esc(inp.id)}"`;
+    const tip = inp.tooltip ? ` <a href="#" class="info-dot" tabindex="0" role="button" data-bs-toggle="tooltip" data-bs-html="true" data-bs-title="${WT.esc(WT.esc(inp.tooltip).replace(/\n+/g, '<br>'))}" aria-label="About ${WT.esc(inp.name)}">i</a>` : '';
+    const hint = inp.hint ? `<div class="form-text">${WT.esc(inp.hint)}</div>` : '';
+    const when = inp.when ? ` data-when="${WT.esc(inp.when.id)}" data-when-val="${WT.esc(inp.when.value)}"` : '';
+    if (inp.type === 'checkbox') return `<div class="col-md-6 po-item"${when}><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="${id}" ${pref} ${v === 'yes' ? 'checked' : ''}>
+      <label class="form-check-label" for="${id}">${WT.esc(inp.name)}</label>${tip}</div>${hint}</div>`;
+    const lbl = `<label class="form-label small mb-1" for="${id}">${WT.esc(inp.name)}</label>${tip}`;
+    if (inp.type === 'dropdown') return `<div class="col-md-6 po-item"${when}>${lbl}<select class="form-select form-select-sm" id="${id}" ${pref}>${inp.options.map(o => `<option value="${WT.esc(o.value)}" ${o.value === v ? 'selected' : ''}>${WT.esc(o.label)}</option>`).join('')}</select>${hint}</div>`;
+    if (inp.type === 'textarea') return `<div class="col-12 po-item"${when}>${lbl}<textarea class="form-control form-control-sm mono" rows="2" id="${id}" ${pref}>${WT.esc(v)}</textarea>${hint}</div>`;
+    return `<div class="col-md-6 col-lg-4 po-item"${when}>${lbl}<input class="form-control form-control-sm" id="${id}" ${pref} value="${WT.esc(v)}">${hint}</div>`;
+  }
+
+  // Draws everything under the template cards for the selected template.
+  function renderCustom() {
+    renderTemplates();
+    const t = tplById(S.tpl), inputs = tplInputs(t);
+    const has = k => inputs.some(i => i.id === k);
+    // speed
+    const speeds = t && SPEED_KEYS.every(has) ? SPEEDS : [];   // only the crawling templates
+    $('#pmSpeedWrap').toggleClass('d-none', !speeds.length);
+    $('#pmSpeed').html(speeds.map(sp => `<div class="col"><label class="card h-100 opt-card"><div class="card-body d-flex gap-2 py-2">
+      <input class="form-check-input mt-1" type="radio" name="pmSpeed" value="${sp.id}"><div><div class="fw-semibold">${sp.name}</div><div class="small text-body-secondary">${sp.text}</div></div></div></label></div>`).join('') +
+      (speeds.length ? `<div class="col"><label class="card h-100 opt-card"><div class="card-body d-flex gap-2 py-2">
+      <input class="form-check-input mt-1" type="radio" name="pmSpeed" value="own"><div><div class="fw-semibold">Your own limits</div><div class="small text-body-secondary">Set pages and time under Advanced &rarr; Limits below.</div></div></div></label></div>` : ''));
+    // families
+    $('#pmCFamWrap').toggleClass('d-none', !(t && t.plugins));
+    // options
+    $('#pmOptsWrap').toggleClass('d-none', !inputs.length);
+    let n = 0;
+    $('#pmOpts').html((t ? t.sections : []).map((sec, si) => {
+      const groups = []; sec.inputs.filter(i => !HIDDEN_INPUTS.includes(i.id)).forEach(i => { let g = groups.find(x => x.name === i.group); if (!g) { g = {name: i.group, items: []}; groups.push(g); } g.items.push(i); });
+      return `<div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#pmSec${si}">
+        ${WT.esc(sec.name)} <span class="badge text-bg-light border ms-2 fw-normal" data-sec-count="${si}"></span></button></h3>
+        <div id="pmSec${si}" class="accordion-collapse collapse" data-sec="${si}"><div class="accordion-body pt-2">${groups.map(g =>
+          `${g.name && g.name !== sec.name ? `<div class="text-uppercase small fw-semibold text-body-secondary mt-2 mb-1">${WT.esc(g.name)}</div>` : ''}<div class="row g-2">${g.items.map(i => inputHtml(i, n++)).join('')}</div>`).join('')}</div></div></div>`;
+    }).join(''));
+    $('#pmOpts [data-bs-toggle="tooltip"]').each((i, el) => bootstrap.Tooltip.getOrCreateInstance(el));
+    $('#pmCredNote').toggleClass('d-none', !(mode() === 'custom' && t && !t.credentials));
+    syncCustom();
+  }
+
+  // Reflects S.over in the dependent bits: conditional fields, counters, the active speed, the note.
+  function syncCustom() {
+    const t = tplById(S.tpl), inputs = tplInputs(t), byId = {}; inputs.forEach(i => { byId[i.id] = i; });
+    $('#pmOpts .po-item[data-when]').each(function () { const p = byId[$(this).data('when')]; $(this).toggleClass('d-none', !p || optVal(p) !== String($(this).data('when-val'))); });
+    const changed = inputs.filter(i => optVal(i) !== i.default);
+    $('#pmOptsChanged').text(changed.length + ' changed').toggleClass('text-bg-primary', changed.length > 0).toggleClass('text-bg-light border', !changed.length);
+    (t ? t.sections : []).forEach((sec, si) => { const c = sec.inputs.filter(i => optVal(i) !== i.default).length; $(`[data-sec-count="${si}"]`).text(c ? c + ' changed' : sec.inputs.filter(i => !HIDDEN_INPUTS.includes(i.id)).length + ' options'); });
+    const cur = k => byId[k] ? optVal(byId[k]) : null;
+    const match = SPEEDS.find(sp => SPEED_KEYS.every(k => !byId[k] || cur(k) === (sp.set[k] || byId[k].default)));
+    $(`input[name=pmSpeed][value="${match ? match.id : 'own'}"]`).prop('checked', true);
+    let note = '';
+    if (t) {
+      const fams = $('.pmCFam:checked').length, all = $('.pmCFam').length;
+      note = `On each run AppSec Guru creates a new policy on Security Center from the <b>${WT.esc(t.name)}</b> template` +
+        (t.plugins ? `, enables ${fams === all ? 'all plugin families' : fams + ' of ' + all + ' plugin families'}` : '') +
+        (changed.length ? `, changes ${changed.length} option${changed.length === 1 ? '' : 's'}` : ', keeps every option at its default') +
+        ' and scans with it. None of your saved policies are touched.' +
+        (inputs.length ? '' : ' This template has no options to configure.');
+    }
+    $('#pmCustomNote').html(note).toggleClass('d-none', !note);
+  }
+  function syncPolicyNote() {
+    const n = $('.pmFam:checked').length;
+    $('#pmPolicyNote').html(n
+      ? `AppSec Guru <b>copies</b> the policy, turns on only the ${n} selected plugin famil${n === 1 ? 'y' : 'ies'} in the copy and scans with the copy. Your saved policy is never changed.`
+      : 'No family selected: the policy runs with its own plugin families. Tick families to narrow the scan &mdash; AppSec Guru then scans with a copy of the policy, never the original.');
+  }
+  function setMode(m) {
+    $(`input[name=pmMode][value="${m}"]`).prop('checked', true);
+    $('#pmModePolicy').toggleClass('d-none', m !== 'policy'); $('#pmModeCustom').toggleClass('d-none', m !== 'custom');
+    // in custom mode the limits live in the template options, not in the Scope select
+    $('#pmScopeCol').toggleClass('d-none', m === 'custom');
+    $('#pmCustomScope').toggleClass('d-none', m === 'custom' || $('#pmScope').val() !== 'custom');
+    if (m === 'custom') { if (!S.tpl && S.templates.length) S.tpl = (S.templates.find(t => t.name === 'Scan') || S.templates[0]).id; renderCustom(); }
+    else $('#pmCredNote').addClass('d-none');
+  }
+  function customPrefs() { return tplInputs(tplById(S.tpl)).filter(i => optVal(i) !== i.default).map(i => i.id + '=' + optVal(i)); }
+  function customFamilies() { const $f = $('.pmCFam'); return $f.filter(':checked').length === $f.length ? [] : $f.filter(':checked').map((i, el) => el.value).get(); }
 
   // --------------------------------------------------------------- wizard
   function schedFields() {
@@ -189,6 +330,8 @@
     $('#pmFolder').html('<option value="">Unfiled</option>' + S.folders.map(f => `<option value="${f.id}">${WT.esc(f.name)}</option>`).join(''));
     $('#pmSensor').html(S.sensors.map(s => `<option value="${s.id}">${WT.esc(s.name)}${s.is_default ? ' (default)' : ''}</option>`).join(''));
     $('#pmPolicy').html(S.policies.map(x => `<option value="${WT.esc(x.id)}">${WT.esc(x.id)} · ${WT.esc(x.name)}</option>`).join(''));
+    $('#pmCFamilies').html(S.families.map(f => `<div class="col"><div class="form-check"><input class="form-check-input pmCFam" type="checkbox" value="${WT.esc(f.name)}" id="cf${f.id}" checked><label class="form-check-label" for="cf${f.id}">${WT.esc(f.name)}</label></div></div>`).join(''));
+    $('#pmCFamPresets').html(FAM_PRESETS.map((x, i) => `<button type="button" class="btn btn-sm btn-outline-secondary py-0" data-fampreset="${i}">${x.name}</button>`).join(''));
     $('#pmFamilies').html(S.families.map(f => `<div class="col"><div class="form-check"><input class="form-check-input pmFam" type="checkbox" value="${WT.esc(f.name)}" id="pf${f.id}"><label class="form-check-label" for="pf${f.id}">${WT.esc(f.name)}</label></div></div>`).join(''));
     $('#pmRepo').html('<option value="">' + ((S.repos || []).length ? '— auto —' : 'no repositories') + '</option>' +
       (S.repos || []).map(r => `<option value="${WT.esc(r.id)}">${WT.esc(r.name)}${r.type ? ' · ' + WT.esc(r.type) : ''}</option>`).join(''));
@@ -198,10 +341,13 @@
     $('#pmName').val(d.name || ''); $('#pmDesc').val(d.description || ''); $('#pmUrl').val(d.target_url || '');
     $('#pmFolder').val(d.folder_id || (S.folder !== 'all' && S.folder !== 'unfiled' ? S.folder : ''));
     $('#pmSensor').val(d.sensor_id || (S.sensors.find(s => s.is_default) || {}).id || '');
-    $('#pmPolicy').val(d.source_policy_id || (S.policies[0] || {}).id);
+    const custom = isTpl(d.source_policy_id);
+    $('#pmPolicy').val(custom ? (S.policies[0] || {}).id : d.source_policy_id || (S.policies[0] || {}).id);
+    S.tpl = custom ? d.source_policy_id.split(':')[1] : null; S.over = {};
+    if (custom) (d.prefs || []).forEach(x => { const i = x.indexOf('='); if (i > 0) S.over[x.slice(0, i)] = x.slice(i + 1); });
     $('#pmDebug').val(d.debug_mode || 'both'); $('#pmScope').val(d.scope || 'fast');
     $('#pmCustomScope').toggleClass('d-none', (d.scope || 'fast') !== 'custom');
-    if (d.scope === 'custom') {
+    if (!custom && d.scope === 'custom') {
       const pf = {}; (d.prefs || []).forEach(x => { const i = x.indexOf('='); if (i > 0) pf[x.slice(0, i)] = x.slice(i + 1); });
       if (pf['was[scope]page_limit']) $('#pmPages').val(pf['was[scope]page_limit']);
       if (pf['was_timeout']) $('#pmScopeTime').val(pf['was_timeout']);
@@ -211,7 +357,9 @@
     $('#pmMaxTime').val(d.max_scan_time || 'unlimited'); $('#pmInactivity').val(String(d.inactivity_hours || 12));
     $('#pmRemoveUnresp').prop('checked', d.remove_unresponsive !== false);
     $('#pmEnabled').prop('checked', d.enabled !== false); $('#pmRunNow').prop('checked', false);
-    (d.families || []).forEach(n => $(`.pmFam[value="${CSS.escape(n)}"]`).prop('checked', true));
+    if (custom) { if ((d.families || []).length) $('.pmCFam').each(function () { this.checked = d.families.includes(this.value); }); }
+    else (d.families || []).forEach(n => $(`.pmFam[value="${CSS.escape(n)}"]`).prop('checked', true));
+    setMode(custom ? 'custom' : 'policy'); syncPolicyNote();
     $('#pmCreds').empty(); (d.credential_ids || []).forEach(cid => {
       const c = S.creds.find(x => String(x.id) === String(cid)); addCredRow(c ? c.type : null, cid);
     });
@@ -236,14 +384,17 @@
     $('#pmSave').toggleClass('d-none', S.step !== STEPS);
   }
   function profBody() {
+    const custom = mode() === 'custom';
     return {name: $('#pmName').val().trim(), description: $('#pmDesc').val().trim(), folder_id: $('#pmFolder').val() || null,
-      target_url: $('#pmUrl').val().trim(), sensor_id: $('#pmSensor').val() || null, source_policy_id: $('#pmPolicy').val(),
-      families: $('.pmFam:checked').map((i, el) => el.value).get(), debug_mode: $('#pmDebug').val(), scope: $('#pmScope').val(),
+      target_url: $('#pmUrl').val().trim(), sensor_id: $('#pmSensor').val() || null,
+      source_policy_id: custom ? 'template:' + S.tpl : $('#pmPolicy').val(),
+      families: custom ? customFamilies() : $('.pmFam:checked').map((i, el) => el.value).get(),
+      debug_mode: $('#pmDebug').val(), scope: custom ? 'policy' : $('#pmScope').val(),
       keep_objects: $('#pmKeep').prop('checked'), repo_id: $('#pmRepo').val() || null, zone_id: $('#pmZone').val() || null,
       credential_ids: collectCreds(), report_ids: collectReports(),
       max_scan_time: $('#pmMaxTime').val(), inactivity_hours: parseInt($('#pmInactivity').val(), 10),
       remove_unresponsive: $('#pmRemoveUnresp').prop('checked'),
-      prefs: scanPrefs(), schedule: schedule(),
+      prefs: custom ? customPrefs() : scanPrefs(), schedule: schedule(),
       enabled: $('#pmEnabled').prop('checked'), run_now: $('#pmRunNow').prop('checked')};
   }
 
@@ -272,13 +423,28 @@
   $('#pmNext').on('click', () => goStep(S.step + 1));
   $('#pmBack').on('click', () => goStep(S.step - 1));
   $('#pmSteps').on('click', 'li', function () { goStep($(this).data('step')); });
-  $('#pmFamNone').on('click', () => $('.pmFam').prop('checked', false));
+  $('#pmFamNone').on('click', () => { $('.pmFam').prop('checked', false); syncPolicyNote(); });
+  $(document).on('change', '.pmFam', syncPolicyNote);
+  $(document).on('change', 'input[name=pmMode]', function () { setMode(this.value); });
+  $(document).on('change', 'input[name=pmTpl]', function () { S.tpl = this.value; S.over = {}; $('.pmCFam').prop('checked', true); renderCustom(); });
+  $(document).on('change', 'input[name=pmSpeed]', function () {
+    const sp = SPEEDS.find(x => x.id === this.value), inputs = tplInputs(tplById(S.tpl));
+    if (!sp) { $('#pmOpts .accordion-collapse').last().each((i, el) => bootstrap.Collapse.getOrCreateInstance(el, {toggle: false}).show()); return; }
+    SPEED_KEYS.forEach(k => { if (!inputs.some(i => i.id === k)) return; if (sp.set[k]) S.over[k] = sp.set[k]; else delete S.over[k]; });
+    renderCustom();
+  });
+  $(document).on('input change', '#pmOpts [data-pref]', function () {
+    S.over[$(this).data('pref')] = this.type === 'checkbox' ? (this.checked ? 'yes' : 'no') : this.value; syncCustom();
+  });
+  $('#pmOptsReset').on('click', () => { S.over = {}; renderCustom(); });
+  $(document).on('click', '[data-fampreset]', function () { const f = FAM_PRESETS[$(this).data('fampreset')]; $('.pmCFam').each(function () { this.checked = !!f.pick(this.value); }); syncCustom(); });
+  $(document).on('change', '.pmCFam', syncCustom);
   $('#pmAddCred').on('click', () => addCredRow());
   $('#pmAddReport').on('click', () => addReportRow());
   $(document).on('click', '.credDel', function () { $(this).closest('.cred-row').remove(); });
   $(document).on('click', '.repDel', function () { $(this).closest('.rep-row').remove(); });
   $(document).on('change', '.credType', function () { fillCredId($(this).closest('.cred-row')); });
-  $('#pmScope').on('change', function () { $('#pmCustomScope').toggleClass('d-none', this.value !== 'custom'); });
+  $('#pmScope').on('change', function () { $('#pmCustomScope').toggleClass('d-none', this.value !== 'custom' || mode() === 'custom'); });
   // ---- bulk move ----
   $(document).on('change', '.scanchk', updateMoveBar);
   $(document).on('change', '#chkAll', function () { $('.scanchk').prop('checked', this.checked); updateMoveBar(); });
@@ -293,7 +459,15 @@
   $(document).on('input change', '#pmSchedFields :input, .pmDay', schedPreview);
   $('#pmSave').on('click', function () {
     const b = profBody();
-    if (!b.name || !b.target_url) { WT.warn('Name and target URL are required'); goStep(1); return; }
+    if (!b.name) { WT.warn('Give the scan a name'); goStep(1); return; }
+    if (mode() === 'custom') {
+      const t = tplById(S.tpl);
+      if (!t) { WT.warn('Pick a template'); goStep(2); return; }
+      if (t.plugins && !$('.pmCFam:checked').length) { WT.warn('Pick at least one plugin family'); goStep(2); return; }
+      const need = tplInputs(t).find(i => i.id === 'was[scope]openapi_file_url');
+      if (need && !optVal(need)) { WT.warn('The API template needs an OpenAPI file URL (Scope options)'); goStep(2); return; }
+    } else if (!b.source_policy_id) { WT.warn('Pick a policy'); goStep(2); return; }
+    if (!b.target_url) { WT.warn('Enter the target URL'); goStep(4); return; }
     const req = S.editing ? WT.api('PUT', '/tenable-was-scans/' + S.editing, b) : WT.post('/tenable-was-scans', b);
     req.then(r => { WT.ok('Scan saved'); bootstrap.Modal.getInstance('#profModal').hide();
       if (r.run_id) { location.href = '/scan-results/' + r.run_id; return; } tree(); }).catch(e => WT.fail(e));
@@ -307,5 +481,9 @@
     S.repos = r[0].repos || []; S.zones = z[0].zones || [];
     S.creds = c[0].credentials || []; S.reports = rp[0].reports || []; tree();
   }).catch(e => WT.fail(e, 'Could not load scan references'));
+  WT.get('/sc/templates').then(r => { S.templates = r.templates || [];
+    if ($('#profModal').hasClass('show') && mode() === 'custom') setMode('custom');
+    if (Object.keys(S.scans).length) profiles();
+  }).catch(e => { $('#pmTemplates').html(`<div class="col-12"><div class="alert alert-warning mb-0 small">Templates could not be loaded: ${WT.esc(e)}</div></div>`); });
   miniRunning();   // no timer: the page loads once and again only on Refresh
 })(jQuery, window.WT);

@@ -75,6 +75,20 @@
     return (h ? h + 'h ' : '') + (h || m ? m + 'm ' : '') + s + 's';
   };
   WT.dt = iso => iso ? new Date(iso).toLocaleString('en-GB') : '';
+  // "3m 14s" between two ISO times (until now while the end is missing)
+  WT.dur = function (from, to) {
+    if (!from) return '';
+    const s = Math.max(0, Math.round(((to ? new Date(to) : new Date()) - new Date(from)) / 1000));
+    return s < 60 ? s + 's' : s < 3600 ? Math.floor(s / 60) + 'm ' + s % 60 + 's' : Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm';
+  };
+  // Run history in the address bar: /<page>/<run id>.
+  WT.runUrl = function (page, open, close) {
+    const idOf = () => { const m = location.pathname.match(new RegExp('^/' + page + '/(\\d+)$')); return m ? parseInt(m[1], 10) : null; };
+    $(window).on('popstate', () => { const id = idOf(); if (id) open(id); else close(); });
+    return {current: idOf,
+      push: id => { if (idOf() !== id) history.pushState(null, '', '/' + page + '/' + id); },
+      clear: () => { if (idOf()) history.replaceState(null, '', '/' + page); }};
+  };
   WT.time = iso => iso ? new Date(iso).toLocaleTimeString('en-GB') : '';
   WT.lvl = l => { const m = l.match(/\[(DEBUG|INFO|NOTICE|WARN|ERROR|FATAL|TRACE)\]/); return m ? ({FATAL: 'ERROR', TRACE: 'DEBUG'}[m[1]] || m[1]) : 'INFO'; };
   WT.logHtml = function (line, rx) {

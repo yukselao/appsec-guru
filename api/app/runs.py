@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from wastools.core import (FINAL_STATES, RUN_PREFIX, Fatal, LogStreamer, SCError, set_output_sink)
-from wastools.ops import create_was_scan, derive_policy, parse_sets, pick_repo
+from wastools.ops import create_policy_from_template, create_was_scan, derive_policy, parse_sets, pick_repo, pick_zone
 from wtdb.database import session_scope
 from wtdb.models import ScanLogStat, ScanRun, ScanRunEvent
 
@@ -227,12 +227,18 @@ def _run(run_id, p, name, cancel_ev):
             if procs:
                 raise Fatal("a scan is running on the scanner; switching host debug would restart the service and kill it")
         audit_shim = _AuditShim(run_id)
-        policy_id = sc.resolve_policy(str(p["policy"]))
         fams = ",".join(p.get("families") or [])
         sets = parse_sets([x for x in (p.get("set") or []) if x])
         if dbg in ("sc", "both"):
             sets["was_debug_mode"] = "yes"
-        if fams or p.get("fast") or sets:
+        if str(p["policy"]).startswith("template:"):
+            # Custom scan: a new policy built from a Tenable WAS template.
+            policy_id = create_policy_from_template(sc, str(p["policy"]).split(":", 1)[1], name + "-policy",
+                                                    fams, sets, audit_shim)
+            created["policy"] = policy_id
+        else:
+            policy_id = sc.resolve_policy(str(p["policy"]))
+        if not created["policy"] and (fams or p.get("fast") or sets):
             policy_id = derive_policy(sc, policy_id, name + "-policy", fams, bool(p.get("fast")), sets, audit_shim)
             created["policy"] = policy_id
         update(run_id, derived_policy_id=created["policy"])
@@ -240,7 +246,7 @@ def _run(run_id, p, name, cancel_ev):
             washost.set_debug(True, audit=audit_shim)
             debug_on = True
         repo = pick_repo(sc, p.get("repo") or None)
-        scan = create_was_scan(sc, name, policy_id, p["url"], repo, p.get("zone") or None,
+        scan = create_was_scan(sc, name, policy_id, p["url"], repo, pick_zone(sc, p.get("zone") or None),
                                "WAS Cockpit run {}".format(run_id),
                                credentials=p.get("credentials") or None,
                                max_scan_time=p.get("max_scan_time") or "unlimited",

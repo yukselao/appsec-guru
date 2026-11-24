@@ -2,6 +2,7 @@
 import datetime
 import json
 import logging
+import time
 import os
 import queue
 import re
@@ -112,7 +113,10 @@ def reset_settings(req: Request, body: dict = Body(...)):
 
 @router.put("/settings")
 def put_settings(req: Request, values: dict = Body(...)):
-    changed = st.save(values, client_ip=ip(req))
+    try:
+        changed = st.save(values, client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     conn.drop_was()
     return {"saved": changed, "settings": st.get_all(), "sources": st.sources()}
 
@@ -218,6 +222,18 @@ def sc_policy(pid: str):
     return {"id": pid, "name": pol.get("name"), "families": fams, "families_source": src,
             "prefs": {k: prefs.get(k) for k in IMPORTANT_PREFS if k in prefs},
             "all_families": [{"id": i, "name": n} for i, n, _ in sc.was_families()]}
+
+
+_TEMPLATES = {"at": 0.0, "rows": None}
+
+
+@router.get("/sc/templates")
+def sc_templates(refresh: bool = False):
+    """Tenable WAS policy templates with their options (cached for 10 minutes)."""
+    if refresh or not _TEMPLATES["rows"] or time.time() - _TEMPLATES["at"] > 600:
+        _TEMPLATES["rows"] = conn.sc().was_templates()
+        _TEMPLATES["at"] = time.time()
+    return {"templates": _TEMPLATES["rows"]}
 
 
 @router.get("/sc/families")
@@ -717,8 +733,14 @@ def logs_stream(req: Request, uuid: str = "", grep: str = "", backlog: int = Que
     streamer = LogStreamer(w, line_filter=flt if (tok or rx) else None, backlog=backlog, echo=False, on_line=push)
 
     def gen():
+        meta = {"sensor": (getattr(w, "sensor", None) or {}).get("name"),
+                "host": w.ssh.host, "port": w.ssh.port, "user": w.ssh.user,
+                "method": w.ssh.method, "jump": w.ssh.jump or None,
+                "path": w.log, "uuid": uuid or None, "backlog": backlog,
+                "cmd": "tail -n {} -F {}".format(backlog, w.log)}
         streamer.start()
         try:
+            yield "event: meta\ndata: " + json.dumps(meta) + "\n\n"
             yield ": connected\n\n"
             while True:
                 try:
@@ -974,7 +996,7 @@ def fuzz_wordlist_del(name: str, req: Request):
 @router.get("/fuzz")
 def fuzz_list(limit: int = 50):
     with session_scope() as s:
-        return {"runs": [fuzz.row(r) for r in s.execute(select(FuzzRun).order_by(desc(FuzzRun.id)).limit(limit)).scalars()]}
+        return {"runs": [fuzz.summary(r) for r in s.execute(select(FuzzRun).order_by(desc(FuzzRun.id)).limit(limit)).scalars()]}
 
 
 @router.post("/fuzz")
@@ -1014,7 +1036,7 @@ def fuzz_delete(run_id: int, req: Request):
 @router.get("/subdomains")
 def subdomains_list(limit: int = 50):
     with session_scope() as s:
-        return {"runs": [recon.row(r) for r in s.execute(select(SubdomainRun).order_by(desc(SubdomainRun.id)).limit(limit)).scalars()]}
+        return {"runs": [recon.summary(r) for r in s.execute(select(SubdomainRun).order_by(desc(SubdomainRun.id)).limit(limit)).scalars()]}
 
 
 @router.post("/subdomains")
@@ -1074,6 +1096,11 @@ def portscan_get(run_id: int):
         return portscan.row(r)
 
 
+@router.get("/portscan/{run_id}/log")
+def portscan_log(run_id: int, offset: int = 0):
+    return portscan.get_log(run_id, offset)
+
+
 @router.post("/portscan/{run_id}/cancel")
 def portscan_cancel(run_id: int, req: Request):
     ok = portscan.cancel(run_id)
@@ -1085,6 +1112,7 @@ def portscan_cancel(run_id: int, req: Request):
 def portscan_delete(run_id: int, req: Request):
     if portscan.is_active(run_id):
         raise HTTPException(409, "cancel the running scan first")
+    portscan.drop_log(run_id)
     with session_scope() as s:
         s.execute(delete(PortScanRun).where(PortScanRun.id == run_id))
     return {"deleted": run_id}
