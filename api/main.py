@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
-from app import nuclei, katana, sqlmap, commix, trivy, kubescape
+from app import nuclei, katana, sqlmap, commix, trivy, kubescape, findings
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
@@ -1438,6 +1438,17 @@ def kubescape_delete(run_id: int, req: Request):
     with session_scope() as s:
         s.execute(delete(KubescapeScan).where(KubescapeScan.id == run_id))
     return {"deleted": run_id}
+
+
+# ---------------------------------------------------------------- Unified findings
+@router.get("/findings")
+def findings_list(source: str = None, type: str = None, severity: str = None, q: str = None, limit: int = 2000):
+    return findings.aggregate(source=source, ftype=type, severity=severity, q=q, limit=limit)
+
+
+@router.get("/findings/summary")
+def findings_summary():
+    return findings.summary()
 
 
 # ------------------------------------------------------------------- audit

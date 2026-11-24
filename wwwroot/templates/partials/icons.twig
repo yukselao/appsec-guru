@@ -30,6 +30,7 @@
   'layers': '<path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/>',
   'helm': '<path d="M12 2l8.5 4.5v9L12 20l-8.5-4.5v-9z"/><circle cx="12" cy="11" r="2.5"/><path d="M12 3.5v3M12 15.5v3M4.5 7l2.6 1.5M16.9 13.5l2.6 1.5M4.5 15l2.6-1.5M16.9 9.5l2.6-1.5"/>',
   'shieldcheck': '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  'list': '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
 } -%}
 <svg class="ico {{ cls|default('') }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ paths[name]|default('')|raw }}</svg>
 {%- endmacro %}

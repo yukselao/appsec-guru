@@ -21,6 +21,7 @@ const PAGES = [
     'image-vulns'      => ['title' => 'Image Vulnerabilities', 'group' => 'Container Security', 'icon' => 'bug', 'template' => 'pages/image-vulns.html.twig'],
     'k8s-posture'      => ['title' => 'K8s Posture', 'group' => 'Kubernetes Security', 'icon' => 'helm', 'template' => 'pages/k8s-posture.html.twig'],
     'kubescape'        => ['title' => 'Manifest Scan', 'group' => 'Kubernetes Security', 'icon' => 'shieldcheck', 'template' => 'pages/kubescape.html.twig'],
+    'findings'         => ['title' => 'All Findings', 'group' => 'Security Findings', 'icon' => 'list', 'template' => 'pages/findings.html.twig'],
     'scans'            => ['title' => 'Scans', 'group' => 'Tenable Web App Scanning', 'icon' => 'radar', 'template' => 'pages/scans.html.twig'],
     'logs'             => ['title' => 'Logs', 'group' => 'Tenable Web App Scanning', 'icon' => 'terminal', 'template' => 'pages/logs.html.twig'],
     'scan-results'     => ['title' => 'Scan Results', 'group' => 'Tenable Web App Scanning', 'icon' => 'list', 'template' => 'pages/results.html.twig'],
