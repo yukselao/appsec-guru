@@ -21,6 +21,7 @@ const PAGES = [
     'image-vulns'      => ['title' => 'Image Vulnerabilities', 'group' => 'Container Security', 'icon' => 'bug', 'template' => 'pages/image-vulns.html.twig'],
     'iac-scan'         => ['title' => 'IaC / Dockerfile', 'group' => 'Container Security', 'icon' => 'filecode', 'template' => 'pages/iac.html.twig'],
     'registries'       => ['title' => 'Registries', 'group' => 'Container Security', 'icon' => 'registry', 'template' => 'pages/registries.html.twig'],
+    'clusters'         => ['title' => 'Live Cluster', 'group' => 'Kubernetes Security', 'icon' => 'cluster', 'template' => 'pages/clusters.html.twig'],
     'k8s-posture'      => ['title' => 'K8s Posture', 'group' => 'Kubernetes Security', 'icon' => 'helm', 'template' => 'pages/k8s-posture.html.twig'],
     'kubescape'        => ['title' => 'Manifest Scan', 'group' => 'Kubernetes Security', 'icon' => 'shieldcheck', 'template' => 'pages/kubescape.html.twig'],
     'kubebench'        => ['title' => 'CIS Benchmark', 'group' => 'Kubernetes Security', 'icon' => 'checklist', 'template' => 'pages/kubebench.html.twig'],

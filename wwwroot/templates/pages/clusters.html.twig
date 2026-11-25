@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">Register cluster
+        <button class="btn btn-sm btn-link ms-auto py-0 d-none" id="clNew">+ New</button></div>
+      <div class="card-body">
+        <form id="clForm">
+          <label class="form-label" for="clName">Name</label>
+          <input class="form-control mb-2" id="clName" placeholder="prod-eu / lab cluster" required>
+          <div class="d-flex align-items-center mb-1"><label class="form-label mb-0" for="clKube">Kubeconfig</label>
+            <label class="btn btn-sm btn-link ms-auto py-0 mb-0" for="clFile">Load file…</label>
+            <input type="file" id="clFile" accept=".yaml,.yml,.config,.kubeconfig,.txt" class="d-none"></div>
+          <textarea class="form-control mono small mb-2" id="clKube" rows="8" spellcheck="false" placeholder="apiVersion: v1&#10;kind: Config&#10;clusters: ..."></textarea>
+          <button class="btn btn-primary w-100" type="submit" id="clSave">Register</button>
+        </form>
+        <div class="alert alert-light border small mt-3 mb-0">The API server must be reachable from the Docker network. For a cluster running on this machine, the kubeconfig <code>server:</code> should use <code>host.docker.internal</code> (not 127.0.0.1) with <code>insecure-skip-tls-verify: true</code>. The kubeconfig is stored encrypted and never shown again.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Clusters <span class="badge text-bg-light border ms-2" id="clCount"></span></div>
+      <div class="card-body p-0"><ul class="list-group list-group-flush small" id="clList"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="card mb-3">
+      <div class="card-header">Run a scan</div>
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label small mb-1">Cluster</label>
+            <select class="form-select form-select-sm" id="clPick"></select>
+          </div>
+          <div class="col-md-7">
+            <label class="form-label small mb-1">Scan</label>
+            <div class="btn-group w-100" role="group" id="clKind">
+              <input type="radio" class="btn-check" name="clkind" id="clk-p" value="posture" checked><label class="btn btn-sm btn-outline-primary" for="clk-p">Posture + RBAC</label>
+              <input type="radio" class="btn-check" name="clkind" id="clk-i" value="image-inventory"><label class="btn btn-sm btn-outline-primary" for="clk-i">Workload images</label>
+              <input type="radio" class="btn-check" name="clkind" id="clk-n" value="node-bench"><label class="btn btn-sm btn-outline-primary" for="clk-n">CIS node benchmark</label>
+            </div>
+          </div>
+        </div>
+        <div class="row g-2 mt-1 align-items-end">
+          <div class="col-md-8" id="clOpts"></div>
+          <div class="col-md-4"><button class="btn btn-primary w-100" id="clGo" disabled>Start scan</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Result <span id="clState" class="ms-2"></span>
+        <span class="small text-body-secondary ms-2" id="clLabel"></span>
+        <a href="#" class="small ms-2 d-none" id="clLogOpen">Log &#8599;</a>
+        <div class="ms-auto d-flex gap-2"><input class="form-control form-control-sm" style="max-width:160px" id="clSearch" placeholder="filter">
+          <button class="btn btn-sm btn-outline-danger" id="clCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3" id="clCards"></div>
+        <div id="clResult"><div class="empty">Register a cluster, pick a scan, and Start.</div></div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex align-items-center">Scan history <span class="badge text-bg-light border ms-2" id="clRunsCount"></span></div>
+      <div class="card-body p-0" style="max-height:34vh;overflow:auto"><ul class="list-group list-group-flush small" id="clRuns"></ul></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="clLogModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Cluster scan log <span class="mono small text-body-secondary ms-1" id="clLogTitle"></span></h5>
+    <span class="badge text-bg-secondary ms-2" id="clLogState">idle</span>
+    <div class="form-check form-switch ms-auto me-2 mb-0"><input class="form-check-input" type="checkbox" id="clLogScroll" checked><label class="form-check-label small" for="clLogScroll">Follow</label></div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body p-0"><pre class="oss-log code mb-0 p-3" id="clLogView" style="min-height:50vh;max-height:70vh;overflow:auto"></pre></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/clusters.js') }}"></script>{% endblock %}
