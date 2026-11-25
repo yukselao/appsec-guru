@@ -15,14 +15,14 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
-from app import nuclei, katana, sqlmap, commix, trivy, trivyconfig, kubescape, kubebench, findings, trends
+from app import nuclei, katana, sqlmap, commix, trivy, trivyconfig, kubescape, kubebench, findings, trends, registries
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, TrivyConfigScan, KubescapeScan, KubeBenchScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, TrivyConfigScan, KubescapeScan, KubeBenchScan, Registry, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -1518,6 +1518,68 @@ def trends_targets(source: str = "trivy"):
 @router.get("/trends/compare")
 def trends_compare(source: str = "trivy", a: int = 0, b: int = 0):
     return trends.compare(source, a, b)
+
+
+# ---------------------------------------------------------------- Container registries
+@router.get("/registries")
+def registries_list():
+    return registries.list_registries()
+
+
+@router.post("/registries")
+def registries_add(req: Request, params: dict = Body(...)):
+    try:
+        return registries.add(params, client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.put("/registries/{reg_id}")
+def registries_update(reg_id: int, req: Request, params: dict = Body(...)):
+    try:
+        return registries.update(reg_id, params, client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.delete("/registries/{reg_id}")
+def registries_delete(reg_id: int, req: Request):
+    try:
+        return registries.delete(reg_id, client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.get("/registries/{reg_id}/test")
+def registries_test(reg_id: int):
+    try:
+        return registries.test(reg_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.get("/registries/{reg_id}/catalog")
+def registries_catalog(reg_id: int):
+    try:
+        return registries.catalog(reg_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.get("/registries/{reg_id}/tags")
+def registries_tags(reg_id: int, repo: str):
+    try:
+        return registries.tags(reg_id, repo)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.post("/registries/{reg_id}/scan")
+def registries_scan(reg_id: int, req: Request, params: dict = Body(...)):
+    try:
+        return registries.scan(reg_id, params.get("repo"), params.get("tag"), params=params, client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 # ---------------------------------------------------------------- kube-bench (CIS)

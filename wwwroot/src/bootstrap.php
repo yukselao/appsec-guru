@@ -20,6 +20,7 @@ const PAGES = [
     'image-inventory'  => ['title' => 'Image Inventory', 'group' => 'Container Security', 'icon' => 'layers', 'template' => 'pages/image-inventory.html.twig'],
     'image-vulns'      => ['title' => 'Image Vulnerabilities', 'group' => 'Container Security', 'icon' => 'bug', 'template' => 'pages/image-vulns.html.twig'],
     'iac-scan'         => ['title' => 'IaC / Dockerfile', 'group' => 'Container Security', 'icon' => 'filecode', 'template' => 'pages/iac.html.twig'],
+    'registries'       => ['title' => 'Registries', 'group' => 'Container Security', 'icon' => 'registry', 'template' => 'pages/registries.html.twig'],
     'k8s-posture'      => ['title' => 'K8s Posture', 'group' => 'Kubernetes Security', 'icon' => 'helm', 'template' => 'pages/k8s-posture.html.twig'],
     'kubescape'        => ['title' => 'Manifest Scan', 'group' => 'Kubernetes Security', 'icon' => 'shieldcheck', 'template' => 'pages/kubescape.html.twig'],
     'kubebench'        => ['title' => 'CIS Benchmark', 'group' => 'Kubernetes Security', 'icon' => 'checklist', 'template' => 'pages/kubebench.html.twig'],

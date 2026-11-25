@@ -345,6 +345,19 @@ class TrivyScan(Base):
     finished_at = Column(DateTime(timezone=True))
 
 
+class Registry(Base):
+    """A container registry connection. The access token/password is stored
+    encrypted (token_enc) with the app secret key; never returned to the UI."""
+    __tablename__ = "registries"
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)
+    host = Column(Text, nullable=False)            # e.g. ghcr.io, registry:5000
+    username = Column(Text)
+    token_enc = Column(LargeBinary)
+    insecure = Column(Boolean, nullable=False, server_default="false")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class TrivyConfigScan(Base):
     """A Trivy misconfiguration / IaC scan (Dockerfile, K8s, Compose, Terraform)."""
     __tablename__ = "trivyconfig_scans"

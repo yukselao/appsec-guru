@@ -94,10 +94,11 @@ def _now():
     return datetime.datetime.now(datetime.timezone.utc)
 
 
-def _argv(image, o):
-    """Whole trivy argv. Only whitelisted flags; the image reference is the only
-    user string and is validated. --format json / offline DB are forced by the
-    container. Never uses the Docker socket (Trivy pulls the image by reference)."""
+def _argv(image, o, auth=None):
+    """Whole trivy argv. Only whitelisted flags; the image reference and registry
+    credentials are the only user strings (the reference is validated). --format
+    json / offline DB are forced by the container. Never uses the Docker socket
+    (Trivy pulls the image by reference, authenticating to the registry if given)."""
     scanners = [x for x in o.get("scanners") or [] if x in SCANNERS] or ["vuln"]
     argv = ["image", image, "--scanners", ",".join(scanners), "--timeout", "{}m".format(o["timeout"])]
     sev = [x for x in o.get("severity") or [] if x in SEVERITIES]
@@ -107,7 +108,29 @@ def _argv(image, o):
         argv += ["--ignore-unfixed"]
     if o.get("list_all_pkgs"):
         argv += ["--list-all-pkgs"]
+    auth = auth or {}
+    if auth.get("insecure"):
+        argv += ["--insecure"]
+    if auth.get("username"):
+        argv += ["--username", auth["username"]]
+    if auth.get("password"):
+        argv += ["--password", auth["password"]]
+    if auth.get("registry_token"):
+        argv += ["--registry-token", auth["registry_token"]]
     return argv
+
+
+def _mask_argv(argv):
+    """Copy of argv with secret flag values replaced by *** for logging."""
+    out, secret_next = [], False
+    for tok in argv:
+        if secret_next:
+            out.append("***")
+            secret_next = False
+        else:
+            out.append(tok)
+            secret_next = tok in ("--password", "--registry-token")
+    return out
 
 
 def start(params, client_ip=None):
@@ -116,22 +139,32 @@ def start(params, client_ip=None):
         raise ValueError("enter a valid image reference, e.g. alpine:3.19 or registry/repo:tag")
     scanners = [x for x in (params.get("scanners") or ["vuln"]) if x in SCANNERS] or ["vuln"]
     severity = [x.upper() for x in (params.get("severity") or []) if x.upper() in SEVERITIES]
+    # Registry credentials are passed to the worker but NEVER persisted (options
+    # is stored in the DB); only booleans describing the auth are recorded.
+    auth = {"username": (params.get("username") or "").strip()[:200],
+            "password": (params.get("password") or "")[:4096],
+            "registry_token": (params.get("registry_token") or "")[:8192],
+            "insecure": bool(params.get("insecure"))}
     opts = {"scanners": scanners, "severity": severity,
             "ignore_unfixed": bool(params.get("ignore_unfixed")),
             "list_all_pkgs": bool(params.get("list_all_pkgs")),
             "timeout": st.get_int("recon.trivy_timeout", _ov(params, "timeout", "recon.trivy_timeout")),
             "stage_timeout": st.get_int("recon.trivy_stage_timeout"),
+            "registry": (params.get("registry") or "")[:120],
+            "authenticated": bool(auth["username"] or auth["registry_token"]),
+            "insecure": auth["insecure"],
             "profile": (params.get("profile") or "")[:30]}
     with session_scope() as s:
         r = TrivyScan(target=image, status="pending", options=opts)
         s.add(r)
         s.flush()
         run_id = r.id
-    st.audit("trivy_scan_create", client_ip=client_ip, run_id=run_id, target=image, scanners=scanners)
+    st.audit("trivy_scan_create", client_ip=client_ip, run_id=run_id, target=image, scanners=scanners,
+             authenticated=opts["authenticated"])
     ev = threading.Event()
     with _lock:
         _active[run_id] = ev
-    threading.Thread(target=_run, args=(run_id, image, opts, ev), name="trivy-%d" % run_id, daemon=True).start()
+    threading.Thread(target=_run, args=(run_id, image, opts, ev, auth), name="trivy-%d" % run_id, daemon=True).start()
     return run_id
 
 
@@ -198,9 +231,9 @@ def _stats(res):
             "packages": len(res["packages"])}
 
 
-def _run(run_id, image, opts, cancel_ev):
-    argv = _argv(image, opts)
-    _log_append(run_id, "$ trivy " + " ".join(argv))
+def _run(run_id, image, opts, cancel_ev, auth=None):
+    argv = _argv(image, opts, auth)
+    _log_append(run_id, "$ trivy " + " ".join(_mask_argv(argv)))
     jbuf, in_json, saw_error = [], False, []
     try:
         update(run_id, status="running")
