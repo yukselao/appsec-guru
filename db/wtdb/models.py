@@ -345,6 +345,21 @@ class TrivyScan(Base):
     finished_at = Column(DateTime(timezone=True))
 
 
+class TrivyConfigScan(Base):
+    """A Trivy misconfiguration / IaC scan (Dockerfile, K8s, Compose, Terraform)."""
+    __tablename__ = "trivyconfig_scans"
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)            # user label / filename
+    kind = Column(String(40))                      # dockerfile | kubernetes | compose | terraform
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="{}")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
+
+
 class KubescapeScan(Base):
     """A Kubescape scan of Kubernetes manifests / Helm output against compliance
     frameworks (NSA, MITRE, CIS...). Manifest mode needs no cluster access."""

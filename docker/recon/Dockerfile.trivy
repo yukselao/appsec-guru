@@ -8,7 +8,13 @@ USER root
 RUN apk add --no-cache socat
 # Bake the vulnerability DB into the image (offline, deterministic at run time).
 RUN trivy image --download-db-only --cache-dir /root/.cache/trivy
+# Bake the misconfiguration check bundle too (for `trivy config` / IaC scanning),
+# so Dockerfile / K8s / Compose / Terraform checks run offline and pinned.
+RUN mkdir -p /tmp/seed && printf 'FROM alpine:3.19\n' > /tmp/seed/Dockerfile \
+    && trivy config /tmp/seed --cache-dir /root/.cache/trivy >/dev/null 2>&1 || true \
+    && rm -rf /tmp/seed
 COPY run-trivy.sh /usr/local/bin/run.sh
+COPY run-trivyconfig.sh /usr/local/bin/run-config.sh
 COPY serve-trivy.sh /usr/local/bin/serve.sh
-RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/run-config.sh /usr/local/bin/serve.sh
 ENTRYPOINT ["/usr/local/bin/serve.sh"]

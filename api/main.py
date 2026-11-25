@@ -15,14 +15,14 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
-from app import nuclei, katana, sqlmap, commix, trivy, kubescape, kubebench, findings
+from app import nuclei, katana, sqlmap, commix, trivy, trivyconfig, kubescape, kubebench, findings
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, KubescapeScan, KubeBenchScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, TrivyConfigScan, KubescapeScan, KubeBenchScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -54,6 +54,7 @@ try:
     sqlmap.mark_orphans()
     commix.mark_orphans()
     trivy.mark_orphans()
+    trivyconfig.mark_orphans()
     kubescape.mark_orphans()
     kubebench.mark_orphans()
     runs.resume_orphans()
@@ -1387,6 +1388,52 @@ def trivy_delete(run_id: int, req: Request):
     trivy.drop_log(run_id)
     with session_scope() as s:
         s.execute(delete(TrivyScan).where(TrivyScan.id == run_id))
+    return {"deleted": run_id}
+
+
+# ---------------------------------------------------------------- IaC / Dockerfile (Trivy config)
+@router.get("/trivyconfig")
+def trivyconfig_list(limit: int = 50):
+    with session_scope() as s:
+        return {"runs": [trivyconfig.summary(r) for r in s.execute(select(TrivyConfigScan).order_by(desc(TrivyConfigScan.id)).limit(limit)).scalars()]}
+
+
+@router.post("/trivyconfig")
+def trivyconfig_start(req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": trivyconfig.start(params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/trivyconfig/{run_id}")
+def trivyconfig_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(TrivyConfigScan, run_id)
+        if not r:
+            raise HTTPException(404, "scan not found")
+        return trivyconfig.row(r)
+
+
+@router.get("/trivyconfig/{run_id}/log")
+def trivyconfig_log(run_id: int, offset: int = 0):
+    return trivyconfig.get_log(run_id, offset)
+
+
+@router.post("/trivyconfig/{run_id}/cancel")
+def trivyconfig_cancel(run_id: int, req: Request):
+    ok = trivyconfig.cancel(run_id)
+    st.audit("trivyconfig_scan_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.delete("/trivyconfig/{run_id}")
+def trivyconfig_delete(run_id: int, req: Request):
+    if trivyconfig.is_active(run_id):
+        raise HTTPException(409, "cancel the running scan first")
+    trivyconfig.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(TrivyConfigScan).where(TrivyConfigScan.id == run_id))
     return {"deleted": run_id}
 
 

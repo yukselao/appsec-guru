@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-5">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">IaC / Dockerfile Scan
+        <span class="small text-body-secondary ms-auto">Trivy config</span></div>
+      <div class="card-body">
+        <p class="small text-body-secondary">Scan a Dockerfile, Kubernetes manifest, Docker Compose file or Terraform for security misconfigurations. Runs fully offline with a baked check bundle &mdash; <b>no build or registry access required</b>.</p>
+        <form id="icForm">
+          <label class="form-label mb-1">Type</label>
+          <div class="d-flex flex-wrap gap-2 mb-3" id="icKind">
+            <div class="form-check"><input class="form-check-input icK" type="radio" name="ick" value="dockerfile" id="ick-d" checked><label class="form-check-label small" for="ick-d">Dockerfile</label></div>
+            <div class="form-check"><input class="form-check-input icK" type="radio" name="ick" value="kubernetes" id="ick-k"><label class="form-check-label small" for="ick-k">Kubernetes</label></div>
+            <div class="form-check"><input class="form-check-input icK" type="radio" name="ick" value="compose" id="ick-c"><label class="form-check-label small" for="ick-c">Compose</label></div>
+            <div class="form-check"><input class="form-check-input icK" type="radio" name="ick" value="terraform" id="ick-t"><label class="form-check-label small" for="ick-t">Terraform</label></div>
+          </div>
+
+          <label class="form-label" for="icName">Label</label>
+          <input class="form-control mb-3" id="icName" placeholder="Dockerfile" value="Dockerfile">
+
+          <div class="d-flex align-items-center mb-1"><label class="form-label mb-0" for="icContent">Content</label>
+            <label class="btn btn-sm btn-link ms-auto py-0 mb-0" for="icFile">Load file…</label>
+            <input type="file" id="icFile" accept=".txt,.yaml,.yml,.json,.tf,Dockerfile,.dockerfile" class="d-none">
+            <button type="button" class="btn btn-sm btn-link py-0 mb-0" id="icSample">Sample</button></div>
+          <textarea class="form-control mono small mb-1" id="icContent" rows="14" spellcheck="false" placeholder="FROM ubuntu:latest&#10;USER root&#10;..."></textarea>
+          <div class="small text-body-secondary mb-3" id="icSize">0 bytes · limit 512 KB</div>
+
+          <button class="btn btn-primary w-100" type="submit" id="icGo">Scan Configuration</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Scan History <span class="badge text-bg-light border ms-2" id="icRunsCount"></span></div>
+      <div class="card-body p-0" style="max-height:40vh;overflow:auto"><ul class="list-group list-group-flush small" id="icRuns"></ul></div>
+    </div>
+  </div>
+  <div class="col-xl-7">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">Result <span id="icState" class="ms-2"></span>
+        <span class="small text-body-secondary ms-2" id="icLabel"></span>
+        <a href="#" class="small ms-2 d-none" id="icLogOpen">Log &#8599;</a>
+        <div class="ms-auto d-flex gap-2">
+          <select class="form-select form-select-sm" style="max-width:130px" id="icFilter"><option value="">All severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select>
+          <input class="form-control form-control-sm" style="max-width:150px" id="icSearch" placeholder="filter">
+          <button class="btn btn-sm btn-outline-secondary" id="icExport" disabled>Export JSON</button>
+          <button class="btn btn-sm btn-outline-danger" id="icCancel" disabled>Cancel</button></div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3" id="icCards"></div>
+        <div class="table-responsive" style="max-height:58vh;overflow:auto"><div id="icTable"><div class="empty">Scan a configuration to see misconfigurations.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="icLogModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Trivy config log <span class="mono small text-body-secondary ms-1" id="icLogTitle"></span></h5>
+    <span class="badge text-bg-secondary ms-2" id="icLogState">idle</span>
+    <div class="form-check form-switch ms-auto me-2 mb-0"><input class="form-check-input" type="checkbox" id="icLogScroll" checked><label class="form-check-label small" for="icLogScroll">Follow</label></div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body p-0"><pre class="oss-log code mb-0 p-3" id="icLogView" style="min-height:50vh;max-height:70vh;overflow:auto"></pre></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/iac.js') }}"></script>{% endblock %}

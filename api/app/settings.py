@@ -78,6 +78,7 @@ FIELDS = {
     "recon.commix_stage_timeout": ("1800", False, "RECON_COMMIX_STAGE_TIMEOUT"),
     "recon.trivy_timeout": ("10", False, "RECON_TRIVY_TIMEOUT"),
     "recon.trivy_stage_timeout": ("900", False, "RECON_TRIVY_STAGE_TIMEOUT"),
+    "recon.trivyconfig_stage_timeout": ("300", False, "RECON_TRIVYCONFIG_STAGE_TIMEOUT"),
     "recon.kubescape_stage_timeout": ("600", False, "RECON_KUBESCAPE_STAGE_TIMEOUT"),
     "recon.kubebench_stage_timeout": ("600", False, "RECON_KUBEBENCH_STAGE_TIMEOUT"),
 }
@@ -116,6 +117,7 @@ INT_LIMITS = {
     "recon.commix_stage_timeout": (60, 7200),
     "recon.trivy_timeout": (1, 60),
     "recon.trivy_stage_timeout": (60, 3600),
+    "recon.trivyconfig_stage_timeout": (60, 3600),
     "recon.kubescape_stage_timeout": (60, 3600),
     "recon.kubebench_stage_timeout": (60, 3600),
 }
