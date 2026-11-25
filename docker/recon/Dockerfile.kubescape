@@ -15,6 +15,7 @@ ENV KUBESCAPE_SKIP_UPDATE_CHECK=true KS_LOGGER_LEVEL=warning
 # Bake the framework/control artifacts for offline scans.
 RUN kubescape download artifacts --output /artifacts 2>&1 | tail -3 || true
 COPY run-kubescape.sh /usr/local/bin/run.sh
+COPY run-kubescape-cluster.sh /usr/local/bin/run-cluster.sh
 COPY serve-kubescape.sh /usr/local/bin/serve.sh
-RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/serve.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/run-cluster.sh /usr/local/bin/serve.sh
 CMD ["/usr/local/bin/serve.sh"]

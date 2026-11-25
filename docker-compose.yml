@@ -73,6 +73,7 @@ services:
       RECON_TRIVY: recon-trivy:7009
       RECON_TRIVYCONFIG: recon-trivy:7012
       RECON_KUBESCAPE: recon-kubescape:7010
+      RECON_KUBESCAPE_CLUSTER: recon-kubescape:7013
       RECON_KUBEBENCH: recon-kubebench:7011
       REPORT_DIR: /var/log/was-troubleshooter/reports
       WORDLIST_DIR: /var/lib/was-troubleshooter/wordlists

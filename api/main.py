@@ -15,14 +15,14 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
-from app import nuclei, katana, sqlmap, commix, trivy, trivyconfig, kubescape, kubebench, findings, trends, registries
+from app import nuclei, katana, sqlmap, commix, trivy, trivyconfig, kubescape, kubebench, findings, trends, registries, clusters
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
 from wastools.monitor import collect
 from wastools.ops import current_families
 from wtdb.database import session_scope
-from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, TrivyConfigScan, KubescapeScan, KubeBenchScan, Registry, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
+from wtdb.models import (AuditLog, ChatMessage, FuzzRun, PortScanRun, NucleiRun, KatanaRun, SqlmapRun, CommixRun, TrivyScan, TrivyConfigScan, KubescapeScan, KubeBenchScan, Registry, Cluster, ClusterScan, ScanFolder, TenableWasScan, SubdomainRun, SastEvent, SastFinding, SastFunction, SastRun, ScanLogStat, ScanRun,
                          ScanRunEvent)
 
 
@@ -55,6 +55,7 @@ try:
     commix.mark_orphans()
     trivy.mark_orphans()
     trivyconfig.mark_orphans()
+    clusters.mark_orphans()
     kubescape.mark_orphans()
     kubebench.mark_orphans()
     runs.resume_orphans()
@@ -1580,6 +1581,92 @@ def registries_scan(reg_id: int, req: Request, params: dict = Body(...)):
         return registries.scan(reg_id, params.get("repo"), params.get("tag"), params=params, client_ip=ip(req))
     except ValueError as exc:
         raise HTTPException(400, str(exc))
+
+
+# ---------------------------------------------------------------- Kubernetes clusters (live)
+@router.get("/clusters")
+def clusters_list():
+    return clusters.list_clusters()
+
+
+@router.post("/clusters")
+def clusters_add(req: Request, params: dict = Body(...)):
+    try:
+        return clusters.add_cluster(params, client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.delete("/clusters/{cluster_id}")
+def clusters_delete(cluster_id: int, req: Request):
+    try:
+        return clusters.delete_cluster(cluster_id, client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.get("/clusters/{cluster_id}/test")
+def clusters_test(cluster_id: int):
+    try:
+        return clusters.test_cluster(cluster_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.get("/cluster-scans")
+def cluster_scans_list(kind: str = None, limit: int = 50):
+    with session_scope() as s:
+        q = select(ClusterScan).order_by(desc(ClusterScan.id)).limit(limit)
+        if kind:
+            q = select(ClusterScan).where(ClusterScan.kind == kind).order_by(desc(ClusterScan.id)).limit(limit)
+        return {"runs": [clusters.summary(r) for r in s.execute(q).scalars()]}
+
+
+@router.post("/clusters/{cluster_id}/scan")
+def cluster_scan_start(cluster_id: int, req: Request, params: dict = Body(...)):
+    try:
+        return {"run_id": clusters.start(cluster_id, params.get("kind"), params, client_ip=ip(req))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.get("/cluster-scans/{run_id}")
+def cluster_scan_get(run_id: int):
+    with session_scope() as s:
+        r = s.get(ClusterScan, run_id)
+        if not r:
+            raise HTTPException(404, "scan not found")
+        return clusters.row(r)
+
+
+@router.get("/cluster-scans/{run_id}/log")
+def cluster_scan_log(run_id: int, offset: int = 0):
+    return clusters.get_log(run_id, offset)
+
+
+@router.post("/cluster-scans/{run_id}/cancel")
+def cluster_scan_cancel(run_id: int, req: Request):
+    ok = clusters.cancel(run_id)
+    st.audit("cluster_scan_cancel", client_ip=ip(req), run_id=run_id, active=ok)
+    return {"cancelled": ok}
+
+
+@router.post("/cluster-scans/{run_id}/scan-image")
+def cluster_scan_image(run_id: int, req: Request, params: dict = Body(...)):
+    try:
+        return clusters.scan_image(run_id, params.get("image"), client_ip=ip(req))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.delete("/cluster-scans/{run_id}")
+def cluster_scan_delete(run_id: int, req: Request):
+    if clusters.is_active(run_id):
+        raise HTTPException(409, "cancel the running scan first")
+    clusters.drop_log(run_id)
+    with session_scope() as s:
+        s.execute(delete(ClusterScan).where(ClusterScan.id == run_id))
+    return {"deleted": run_id}
 
 
 # ---------------------------------------------------------------- kube-bench (CIS)

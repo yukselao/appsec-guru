@@ -345,6 +345,36 @@ class TrivyScan(Base):
     finished_at = Column(DateTime(timezone=True))
 
 
+class Cluster(Base):
+    """A registered Kubernetes cluster. The kubeconfig is stored encrypted with
+    the app secret key; never returned to the UI. The API server must be
+    reachable from the Docker network."""
+    __tablename__ = "clusters"
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)
+    server = Column(Text)                          # display only (API server URL)
+    context = Column(Text)                         # kubeconfig context name
+    kubeconfig_enc = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ClusterScan(Base):
+    """A scan against a registered cluster: posture (Kubescape), node CIS
+    benchmark (kube-bench Job) or running-image inventory (feeds Trivy)."""
+    __tablename__ = "cluster_scans"
+    id = Column(Integer, primary_key=True)
+    cluster_id = Column(Integer, ForeignKey("clusters.id", ondelete="SET NULL"))
+    cluster_name = Column(Text)
+    kind = Column(String(30), nullable=False)      # posture | node-bench | image-inventory
+    status = Column(String(20), nullable=False, server_default="pending")
+    error = Column(Text)
+    options = Column(JSONB, nullable=False, server_default="{}")
+    results = Column(JSONB, nullable=False, server_default="{}")
+    stats = Column(JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at = Column(DateTime(timezone=True))
+
+
 class Registry(Base):
     """A container registry connection. The access token/password is stored
     encrypted (token_enc) with the app secret key; never returned to the UI."""
