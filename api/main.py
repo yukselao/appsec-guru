@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import delete, desc, func, select
 
 from app import ai, conn, fuzz, portscan, tenable_was_scan as was_scan, recon, runs, sensors
-from app import nuclei, katana, sqlmap, commix, trivy, trivyconfig, kubescape, kubebench, findings
+from app import nuclei, katana, sqlmap, commix, trivy, trivyconfig, kubescape, kubebench, findings, trends
 from harness import analysis as hanalysis, loader as hloader, sast
 from app import settings as st
 from wastools.core import (IMPORTANT_PREFS, Fatal, LogStreamer, SCError, prefs_dict, ts_human)
@@ -1497,6 +1497,27 @@ def findings_list(source: str = None, type: str = None, severity: str = None, q:
 @router.get("/findings/summary")
 def findings_summary():
     return findings.summary()
+
+
+# ---------------------------------------------------------------- Trends & comparison (read-model)
+@router.get("/trends/overview")
+def trends_overview():
+    return trends.overview()
+
+
+@router.get("/trends/timeline")
+def trends_timeline(source: str = "trivy", days: int = 90):
+    return trends.timeline(source, days=days)
+
+
+@router.get("/trends/targets")
+def trends_targets(source: str = "trivy"):
+    return trends.targets(source)
+
+
+@router.get("/trends/compare")
+def trends_compare(source: str = "trivy", a: int = 0, b: int = 0):
+    return trends.compare(source, a, b)
 
 
 # ---------------------------------------------------------------- kube-bench (CIS)

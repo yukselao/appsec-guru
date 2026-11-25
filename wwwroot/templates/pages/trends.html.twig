@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+{% block content %}
+<div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+  <div class="btn-group" role="group" id="trSource">
+    <input type="radio" class="btn-check" name="trsrc" id="trs-trivy" value="trivy" checked><label class="btn btn-sm btn-outline-primary" for="trs-trivy">Image vulns</label>
+    <input type="radio" class="btn-check" name="trsrc" id="trs-cfg" value="trivyconfig"><label class="btn btn-sm btn-outline-primary" for="trs-cfg">IaC misconfig</label>
+    <input type="radio" class="btn-check" name="trsrc" id="trs-ks" value="kubescape"><label class="btn btn-sm btn-outline-primary" for="trs-ks">Kubescape</label>
+    <input type="radio" class="btn-check" name="trsrc" id="trs-kb" value="kubebench"><label class="btn btn-sm btn-outline-primary" for="trs-kb">kube-bench</label>
+  </div>
+  <select class="form-select form-select-sm ms-auto" style="max-width:150px" id="trDays">
+    <option value="30">Last 30 days</option>
+    <option value="90" selected>Last 90 days</option>
+    <option value="365">Last year</option>
+    <option value="3650">All time</option>
+  </select>
+  <button class="btn btn-sm btn-outline-secondary" id="trRefresh">Refresh</button>
+</div>
+
+<div class="row g-2 mb-3" id="trCards"></div>
+
+<div class="card mb-3">
+  <div class="card-header d-flex align-items-center"><span id="trChartTitle">Findings over time</span>
+    <span class="small text-body-secondary ms-2" id="trChartNote"></span></div>
+  <div class="card-body"><div style="position:relative;height:300px"><canvas id="trChart"></canvas></div>
+    <div id="trChartEmpty" class="empty d-none">No completed scans in this window. Run a few scans to build a trend.</div></div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center flex-wrap gap-2">Run-over-run comparison
+    <div class="ms-auto d-flex flex-wrap gap-2 align-items-center">
+      <select class="form-select form-select-sm" style="max-width:220px" id="trTarget"></select>
+      <select class="form-select form-select-sm" style="max-width:190px" id="trA" title="baseline scan"></select>
+      <span class="text-body-secondary">→</span>
+      <select class="form-select form-select-sm" style="max-width:190px" id="trB" title="comparison scan"></select>
+      <button class="btn btn-sm btn-primary" id="trCompare">Compare</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div id="trCmpSummary" class="row g-2 mb-3 d-none"></div>
+    <div id="trCmp"><div class="empty">Pick a target scanned at least twice, choose a baseline and a later scan, then Compare.</div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('pages/trends.js') }}"></script>{% endblock %}

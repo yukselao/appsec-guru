@@ -24,6 +24,7 @@ const PAGES = [
     'kubescape'        => ['title' => 'Manifest Scan', 'group' => 'Kubernetes Security', 'icon' => 'shieldcheck', 'template' => 'pages/kubescape.html.twig'],
     'kubebench'        => ['title' => 'CIS Benchmark', 'group' => 'Kubernetes Security', 'icon' => 'checklist', 'template' => 'pages/kubebench.html.twig'],
     'findings'         => ['title' => 'All Findings', 'group' => 'Security Findings', 'icon' => 'list', 'template' => 'pages/findings.html.twig'],
+    'trends'           => ['title' => 'Trends & Compare', 'group' => 'Security Findings', 'icon' => 'trend', 'template' => 'pages/trends.html.twig'],
     'scans'            => ['title' => 'Scans', 'group' => 'Tenable Web App Scanning', 'icon' => 'radar', 'template' => 'pages/scans.html.twig'],
     'logs'             => ['title' => 'Logs', 'group' => 'Tenable Web App Scanning', 'icon' => 'terminal', 'template' => 'pages/logs.html.twig'],
     'scan-results'     => ['title' => 'Scan Results', 'group' => 'Tenable Web App Scanning', 'icon' => 'list', 'template' => 'pages/results.html.twig'],
